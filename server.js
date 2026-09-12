@@ -219,7 +219,6 @@ app.post('/api/auth/login', async (req, res) => {
         req.session.userId = user.id;
         res.json({ success: true });
     } catch (err) {
-        console.error('Login fejl:', err);
         res.status(500).json({ error: 'Kunne ikke logge ind.' });
     }
 });
@@ -534,8 +533,9 @@ app.post('/api/checkout', async (req, res) => {
         let pricePerCard = basePrices[tier] || 279;
 
         if (req.session.userId) {
-            const userRes = await pool.query('SELECT membership_active FROM users WHERE id = $1', [req.session.userId]);
-            if (userRes.rows[0]?.membership_active) {
+            const userRes = await pool.query('SELECT membership_active, membership_plan FROM users WHERE id = $1', [req.session.userId]);
+            const userObj = userRes.rows[0];
+            if (userObj?.membership_active || userObj?.membership_plan === 'free') {
                 if (tier === 'bulk') pricePerCard = 249;
                 else pricePerCard = Math.round(pricePerCard * 0.95);
             }
