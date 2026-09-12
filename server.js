@@ -13,7 +13,7 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// Automatisk oprettelse og opdatering af databasetabeller (inklusiv session-tabel til Supabase)
+// Automatisk oprettelse og opdatering af databasetabeller
 async function initDb() {
     try {
         await pool.query(`
@@ -35,7 +35,7 @@ async function initDb() {
                 name VARCHAR(255),
                 email VARCHAR(255) UNIQUE NOT NULL,
                 phone VARCHAR(50),
-                password VARCHAR(255) NOT NULL,
+                password VARCHAR(255),
                 membership_active BOOLEAN DEFAULT false,
                 membership_plan VARCHAR(50),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -82,9 +82,13 @@ async function initDb() {
             );
         `);
 
+        // Sikr at alle nødvendige kolonner findes i eksisterende tabeller
         await pool.query(`
             ALTER TABLE products ALTER COLUMN image_url TYPE TEXT;
             ALTER TABLE products ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'til salg';
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255);
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255);
             ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_active BOOLEAN DEFAULT false;
             ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_plan VARCHAR(50);
         `).catch(() => {});
@@ -205,7 +209,6 @@ app.post('/api/auth/logout', (req, res) => {
     });
 });
 
-// HENT BRUGERPROFIL OG ORDRER TIL ACCOUNT.HTML
 app.get('/api/account', async (req, res) => {
     if (!req.session.userId) return res.status(401).json({ error: 'Ikke logget ind' });
     try {
