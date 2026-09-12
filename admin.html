@@ -1,236 +1,260 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="da">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel | The Poke Bros</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Admin Dashboard | The Poke Bros</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .admin-container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
-        .admin-box { background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 30px; color: #333; }
-        .admin-box h2 { color: #1a1a1a; margin-top: 0; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; color: #333; }
-        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; background: #fff; color: #1a1a1a; font-size: 14px; }
-        .order-table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #fff; color: #333; }
-        .order-table th, .order-table td { padding: 10px; border: 1px solid #ddd; text-align: left; font-size: 14px; color: #333; }
-        .order-table th { background: #f8f9fa; font-weight: bold; }
-        #statsBox { color: #333; margin-bottom: 15px; font-weight: bold; }
+        .admin-container { max-width: 1200px; margin: 40px auto; padding: 0 20px; color: #fff; }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px; }
+        .admin-header h1 { color: #e63946; margin: 0; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: #111318; border: 1px solid #222; border-radius: 10px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .stat-card span { font-size: 13px; color: #888; text-transform: uppercase; display: block; margin-bottom: 5px; }
+        .stat-card h3 { font-size: 24px; color: #fff; margin: 0; }
+        
+        .admin-card { background: #111318; border: 1px solid #222; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .admin-card h2 { color: #e63946; margin-top: 0; margin-bottom: 20px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+        table th, table td { padding: 12px; border-bottom: 1px solid #222; text-align: left; }
+        table th { background: #1a1e29; color: #aaa; }
+        
+        .form-inline { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .form-inline input, .form-inline select { padding: 8px 12px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; }
+        
+        .login-box { max-width: 400px; margin: 100px auto; background: #111318; padding: 40px; border-radius: 12px; border: 1px solid #222; text-align: center; }
+        .login-box input { width: 100%; padding: 12px; margin: 15px 0; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 6px; box-sizing: border-box; }
     </style>
 </head>
 <body>
     <header>
-        <a class="brand" href="index.html">THE POKE BROS ADMIN</a>
+        <a class="brand" href="index.html">THE POKE BROS</a>
+        <nav><a href="index.html">Til forsiden</a></nav>
     </header>
 
-    <main class="admin-container">
-        <!-- Login sektion -->
-        <div id="loginBox" class="admin-box">
-            <h2>Admin Login</h2>
-            <div class="form-group">
-                <label>Admin Adgangskode</label>
-                <input type="password" id="adminPass" placeholder="Indtast adgangskode...">
-            </div>
-            <button class="btn" onclick="loadAdminData()">Log ind</button>
-            <p id="loginMsg" style="color:red; margin-top:10px;"></p>
+    <div id="loginScreen" class="login-box">
+        <h2 style="color: #e63946; margin-top: 0;">Admin Login</h2>
+        <p style="color: #aaa; font-size: 14px;">Indtast administrator-adgangskoden for at fortsætte.</p>
+        <input type="password" id="adminPassInput" placeholder="Admin kodeord">
+        <button onclick="loginAdmin()" class="btn" style="width: 100%;">Log ind</button>
+        <p id="loginError" style="color: #ff4d5a; margin-top: 10px; font-size: 13px;"></p>
+    </div>
+
+    <main id="adminContent" class="admin-container" style="display: none;">
+        <div class="admin-header">
+            <h1>Admin Dashboard</h1>
+            <button onclick="logoutAdmin()" class="btn ghost" style="padding: 8px 16px;">Log ud</button>
         </div>
 
-        <!-- Admin Indhold -->
-        <div id="adminContent" style="display:none;">
-            <!-- Administrer Pulje -->
-            <div class="admin-box">
-                <h2>Styr CGC Pulje (Forside-tæller)</h2>
-                <p style="font-size:14px; color:#666;">Indtast det antal kort der aktuelt er i puljen, og tryk gem.</p>
-                <div style="display:flex; gap:15px; align-items:flex-end;">
-                    <div class="form-group" style="flex:1; margin-bottom:0;">
-                        <label>Antal kort i puljen (ud af 25)</label>
-                        <input type="number" id="poolInput" min="0" max="25" value="0">
-                    </div>
-                    <button class="btn" onclick="updatePoolCount()" style="height:42px;">Gem pulje-tal</button>
-                </div>
-                <p id="poolMsg" style="margin-top:10px; font-weight:bold;"></p>
+        <!-- Statistik Overblik -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <span>Omsætning (Betalt)</span>
+                <h3 id="statRevenue">0 kr.</h3>
             </div>
-
-            <!-- Tilføj Produkt Formular -->
-            <div class="admin-box">
-                <h2>Opret nyt produkt til Shoppen</h2>
-                <form id="addProductForm">
-                    <div class="form-group">
-                        <label>Titel på kort / vare</label>
-                        <input type="text" name="title" placeholder="fx Charizard Base Set Shadowless CGC 9" required>
-                    </div>
-                    <div style="display:flex; gap:15px; flex-wrap:wrap;">
-                        <div class="form-group" style="flex:1; min-width:200px;">
-                            <label>Kategori</label>
-                            <select name="category" required>
-                                <option value="slab">CGC Slab</option>
-                                <option value="raw">Enkeltkort (Raw)</option>
-                                <option value="sealed">Sealed / Tilbehør</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="flex:1; min-width:200px;">
-                            <label>Pris (DKK)</label>
-                            <input type="number" name="priceDkk" placeholder="fx 1250" required>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Billede URL (Imgur, Google Drive eller direkte link)</label>
-                        <input type="url" name="imageUrl" placeholder="https://i.imgur.com/...">
-                    </div>
-                    <button type="submit" class="btn">Tilføj produkt til shop</button>
-                    <p id="productMsg" style="margin-top:10px; font-weight:bold;"></p>
-                </form>
+            <div class="stat-card">
+                <span>Antal Ordrer</span>
+                <h3 id="statOrders">0</h3>
             </div>
+            <div class="stat-card">
+                <span>Kort i Aktiv Pulje</span>
+                <h3 id="statPool">0 stk.</h3>
+            </div>
+            <div class="stat-card">
+                <span>Aktive Medlemmer</span>
+                <h3 id="statMembers">0</h3>
+            </div>
+        </div>
 
-            <!-- Ordreoversigt -->
-            <div class="admin-box">
-                <h2>Grading Ordreoversigt</h2>
-                <div id="statsBox"></div>
-                <div style="overflow-x:auto;">
-                    <table class="order-table">
-                        <thead>
-                            <tr>
-                                <th>Ordre ID</th>
-                                <th>Kunde</th>
-                                <th>Kort</th>
-                                <th>Tier</th>
-                                <th>Status</th>
-                                <th>Handling</th>
-                            </tr>
-                        </thead>
-                        <tbody id="ordersTableBody">
-                        </tbody>
-                    </table>
+        <!-- Pulje Styring Sektion -->
+        <div class="admin-card">
+            <h2>Styr Puljetæller manuelt</h2>
+            <p style="color: #aaa; font-size: 14px;">Hvis du vil overstyre antallet af kort vist i puljen på forsiden, kan du indtaste det herunder.</p>
+            <div class="form-inline" style="margin-top: 15px;">
+                <input type="number" id="manualPoolInput" placeholder="Fx 18" style="width: 150px;">
+                <button onclick="updatePoolStatus()" class="btn" style="padding: 8px 16px;">Opdatér pulje</button>
+            </div>
+        </div>
+
+        <!-- Opret Produkt i Shop -->
+        <div class="admin-card">
+            <h2>Opret nyt produkt i Shoppen</h2>
+            <form id="productForm" onsubmit="createProduct(event)" class="form-inline" style="gap: 15px; align-items: flex-end;">
+                <div>
+                    <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Titel</label>
+                    <input type="text" name="title" placeholder="Fx Charizard PSA 10" required style="width: 220px;">
                 </div>
+                <div>
+                    <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Kategori</label>
+                    <input type="text" name="category" placeholder="Fx Slabs / Kort" required style="width: 140px;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Pris (DKK)</label>
+                    <input type="number" name="priceDkk" placeholder="1499" required style="width: 100px;">
+                </div>
+                <div style="flex: 1; min-width: 200px;">
+                    <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Billede URL</label>
+                    <input type="text" name="imageUrl" placeholder="https://..." style="width: 100%;">
+                </div>
+                <button type="submit" class="btn" style="padding: 10px 20px;">Opret produkt</button>
+            </form>
+        </div>
+
+        <!-- Ordrer Oversigt -->
+        <div class="admin-card">
+            <h2>Ordrer</h2>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ordre ID</th>
+                            <th>Kunde</th>
+                            <th>Tier / Antal</th>
+                            <th>Total</th>
+                            <th>Betaling</th>
+                            <th>Status & Handling</th>
+                        </tr>
+                    <thead id="ordersTableBody">
+                        <tr><td colspan="6" style="text-align: center; color: #888;">Indlæser ordrer...</td></tr>
+                    </thead>
+                </table>
             </div>
         </div>
     </main>
 
     <script>
-    let currentPass = '';
+        let adminPass = localStorage.getItem('tpb_admin_pass') || '';
 
-    async function loadAdminData() {
-        const pass = document.getElementById('adminPass').value;
-        const msg = document.getElementById('loginMsg');
-        msg.textContent = 'Verificerer...';
-
-        try {
-            const res = await fetch('/api/admin/orders', {
-                headers: { 'x-admin-password': pass }
-            });
-            
-            if (!res.ok) throw new Error('Forkert adgangskode.');
-
-            const data = await res.json();
-            currentPass = pass;
-            document.getElementById('loginBox').style.display = 'none';
-            document.getElementById('adminContent').style.display = 'block';
-            
-            // Sæt nuværende pulje-tal i input-feltet
-            document.getElementById('poolInput').value = data.stats.poolCards;
-
-            renderOrders(data);
-        } catch (err) {
-            msg.textContent = err.message;
+        if (adminPass) {
+            verifyAndLoadDashboard();
         }
-    }
 
-    async function updatePoolCount() {
-        const count = document.getElementById('poolInput').value;
-        const msg = document.getElementById('poolMsg');
-        msg.textContent = 'Gemmer...';
+        async function loginAdmin() {
+            const pass = document.getElementById('adminPassInput').value.trim();
+            adminPass = pass;
+            await verifyAndLoadDashboard();
+        }
 
-        try {
-            const res = await fetch('/api/admin/pool-status', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-admin-password': currentPass
-                },
-                body: JSON.stringify({ count })
-            });
-            if (res.ok) {
-                msg.style.color = 'green';
-                msg.textContent = 'Puljetal opdateret succesfuldt på forsiden!';
-            } else {
-                throw new Error('Fejl ved opdatering');
+        async function verifyAndLoadDashboard() {
+            try {
+                const res = await fetch('/api/admin/orders', {
+                    headers: { 'x-admin-password': adminPass }
+                });
+                if (!res.ok) throw new Error('Forkert adgangskode');
+
+                localStorage.setItem('tpb_admin_pass', adminPass);
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('adminContent').style.display = 'block';
+                loadDashboardData(res);
+            } catch (err) {
+                document.getElementById('loginError').textContent = 'Forkert adgangskode. Prøv igen.';
+                localStorage.removeItem('tpb_admin_pass');
             }
-        } catch (e) {
-            msg.style.color = 'red';
-            msg.textContent = 'Kunne ikke gemme puljetal.';
         }
-    }
 
-    function renderOrders(data) {
-        document.getElementById('statsBox').textContent = `Total ordrer: ${data.stats.orders} | Aktuel pulje: ${data.stats.poolCards} kort | Medlemmer: ${data.stats.members}`;
-        
-        const tbody = document.getElementById('ordersTableBody');
-        tbody.innerHTML = data.orders.map(o => `
-            <tr>
-                <td><b>${o.orderId}</b></td>
-                <td>${o.customer_name}<br><small>${o.customer_email}</small></td>
-                <td>${o.qty} stk.</td>
-                <td>${o.tier}</td>
-                <td><span style="background:#e0e0e0; padding:3px 6px; border-radius:4px; font-size:12px; color:#333;">${o.statusLabel}</span></td>
-                <td>
-                    <select onchange="updateStatus('${o.orderId}', this.value)" style="padding:5px;">
-                        <option value="">Skift status...</option>
-                        ${Object.entries(data.statuses).map(([k,v]) => `<option value="${k}">${v}</option>`).join('')}
-                    </select>
-                </td>
-            </tr>
-        `).join('');
-    }
-
-    async function updateStatus(orderId, newStatus) {
-        if (!newStatus) return;
-        try {
-            await fetch(`/api/admin/orders/${orderId}`, {
-                method: 'PATCH',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'x-admin-password': currentPass 
-                },
-                body: JSON.stringify({ status: newStatus })
-            });
-            alert('Status opdateret!');
-            loadAdminData();
-        } catch (err) {
-            alert('Fejl ved opdatering af status.');
+        function logoutAdmin() {
+            localStorage.removeItem('tpb_admin_pass');
+            location.reload();
         }
-    }
 
-    document.getElementById('addProductForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const msg = document.getElementById('productMsg');
-        msg.textContent = 'Opretter produkt...';
+        async function loadDashboardData(response) {
+            const data = await response || await fetch('/api/admin/orders', { headers: { 'x-admin-password': adminPass } }).then(r => r.json());
+            
+            // Opdatér statistik
+            document.getElementById('statRevenue').textContent = (data.stats.paidRevenueDkk || 0).toLocaleString('da-DK') + ' kr.';
+            document.getElementById('statOrders').textContent = data.stats.orders || 0;
+            document.getElementById('statPool').textContent = (data.stats.poolCards || 0) + ' stk.';
+            document.getElementById('statMembers').textContent = data.stats.members || 0;
 
-        const data = Object.fromEntries(new FormData(e.target));
-        data.categoryLabel = e.target.category.options[e.target.category.selectedIndex].text;
-
-        try {
-            const res = await fetch('/api/admin/products', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-admin-password': currentPass
-                },
-                body: JSON.stringify(data)
-            });
-
-            const result = await res.json();
-            if (res.ok) {
-                msg.style.color = 'green';
-                msg.textContent = 'Varen er nu oprettet i shoppen!';
-                e.target.reset();
-            } else {
-                throw new Error(result.error || 'Fejl ved oprettelse');
+            const tbody = document.getElementById('ordersTableBody');
+            if (!data.orders || data.orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #888;">Ingen ordrer fundet.</td></tr>';
+                return;
             }
-        } catch (err) {
-            msg.style.color = 'red';
-            msg.textContent = err.message;
+
+            tbody.innerHTML = data.orders.map(o => `
+                <tr>
+                    <td>
+                        <b>${o.order_id}</b><br>
+                        <span style="font-size: 11px; color: #888;">${new Date(o.created_at).toLocaleDateString('da-DK')}</span><br>
+                        <a href="packingslip.html?order=${o.order_id}" target="_blank" style="font-size: 11px; color: #e63946; text-decoration: underline;">📄 Pakkeseddel</a>
+                    </td>
+                    <td>
+                        <b>${o.customer_name}</b><br>
+                        <span style="font-size: 12px; color: #aaa;">${o.customer_email}</span><br>
+                        <span style="font-size: 11px; color: #666;">${o.customer_address}, ${o.customer_postal} ${o.customer_city}</span>
+                    </td>
+                    <td>${o.tier.toUpperCase()} (${o.qty} stk.)</td>
+                    <td><b>${o.total_dkk} kr.</b></td>
+                    <td><span style="color: ${o.payment_status === 'paid' ? '#2ecc71' : '#f39c12'};">${o.payment_status}</span></td>
+                    <td>
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <select onchange="updateOrderStatus('${o.order_id}', this.value)" style="background: #1a1e29; color: #fff; border: 1px solid #333; padding: 6px; border-radius: 4px;">
+                                ${Object.entries(data.statuses).map(([key, label]) => `<option value="${key}" ${o.status === key ? 'selected' : ''}>${label}</option>`).join('')}
+                            </select>
+                            <input type="text" placeholder="Trackingnummer" value="${o.tracking_number || ''}" onchange="updateTracking('${o.order_id}', this.value)" style="background: #1a1e29; color: #fff; border: 1px solid #333; padding: 4px 6px; border-radius: 4px; font-size: 12px;">
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
         }
-    });
+
+        async function updateOrderStatus(orderId, newStatus) {
+            try {
+                const res = await fetch(`/api/admin/orders/${orderId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPass },
+                    body: JSON.stringify({ status: newStatus })
+                });
+                if (!res.ok) throw new Error('Fejl');
+                loadDashboardData();
+            } catch (e) { alert('Kunne ikke opdatere status'); }
+        }
+
+        async function updateTracking(orderId, trackingNumber) {
+            try {
+                const res = await fetch(`/api/admin/orders/${orderId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPass },
+                    body: JSON.stringify({ trackingNumber })
+                });
+                if (!res.ok) throw new Error('Fejl');
+                alert('Trackingnummer gemt!');
+            } catch (e) { alert('Kunne ikke gemme tracking'); }
+        }
+
+        async function updatePoolStatus() {
+            const count = document.getElementById('manualPoolInput').value;
+            if (count === '') return;
+            try {
+                const res = await fetch('/api/admin/pool-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPass },
+                    body: JSON.stringify({ count: Number(count) })
+                });
+                if (!res.ok) throw new Error('Fejl');
+                alert('Pulje opdateret!');
+                loadDashboardData();
+            } catch (e) { alert('Fejl ved opdatering af pulje'); }
+        }
+
+        async function createProduct(e) {
+            e.preventDefault();
+            const form = e.target;
+            const data = Object.fromEntries(new FormData(form));
+            try {
+                const res = await fetch('/api/admin/products', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPass },
+                    body: JSON.stringify(data)
+                });
+                if (!res.ok) throw new Error('Fejl');
+                alert('Produkt oprettet!');
+                form.reset();
+            } catch (e) { alert('Kunne ikke oprette produkt'); }
+        }
     </script>
 </body>
 </html>
