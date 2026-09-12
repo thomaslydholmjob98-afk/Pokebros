@@ -69,17 +69,17 @@
             </div>
         </div>
 
-        <!-- NY SEKTION: BRUGER- OG MEDLEMSKABSHÅNDTERING -->
+        <!-- SEKTION: BRUGER- OG MEDLEMSKABSHÅNDTERING -->
         <div class="admin-card">
             <h2>Registrerede Brugerkonti & Medlemskaber</h2>
-            <p style="color: #aaa; font-size: 14px; margin-bottom: 15px;">Her kan du se alle oprettede brugerkonti, ændre deres medlemsplan eller slette profiler.</p>
+            <p style="color: #aaa; font-size: 14px; margin-bottom: 15px;">Her kan du administrere brugere, give gratis medlemskaber til venner eller slette konti.</p>
             <div style="overflow-x: auto;">
                 <table>
                     <thead>
                         <tr>
                             <th>Navn & E-mail</th>
                             <th>Telefon</th>
-                            <th>Medlemskab Status</th>
+                            <th>Medlemskab Type & Status</th>
                             <th>Oprettet</th>
                             <th>Handlinger</th>
                         </tr>
@@ -286,9 +286,10 @@
                                 <select id="plan-${u.id}" style="background: #1a1e29; color: #fff; border: 1px solid #333; padding: 5px; border-radius: 4px; font-size: 13px;">
                                     <option value="monthly" ${u.membership_plan === 'monthly' ? 'selected' : ''}>Månedlig (59 kr.)</option>
                                     <option value="yearly" ${u.membership_plan === 'yearly' ? 'selected' : ''}>Årlig (599 kr.)</option>
+                                    <option value="free" ${u.membership_plan === 'free' ? 'selected' : ''}>🎁 Gratis VIP Medlem</option>
                                 </select>
                                 <span style="font-size: 12px; padding: 2px 6px; border-radius: 4px; background: ${u.membership_active ? '#2ec4b6' : '#333'}; color: ${u.membership_active ? '#000' : '#aaa'}; font-weight: bold;">
-                                    ${u.membership_active ? 'Aktiv' : 'Inaktiv'}
+                                    ${u.membership_active ? (u.membership_plan === 'free' ? 'Gratis VIP' : 'Aktiv') : 'Inaktiv'}
                                 </span>
                             </div>
                         </td>
@@ -323,6 +324,7 @@
                 });
                 if (!res.ok) throw new Error('Kunne ikke opdatere medlemskab');
                 loadAdminUsers();
+                loadDashboardData();
             } catch (err) {
                 alert(err.message);
             }
@@ -338,6 +340,7 @@
                 });
                 if (!res.ok) throw new Error('Kunne ikke slette bruger');
                 loadAdminUsers();
+                loadDashboardData();
             } catch (err) {
                 alert(err.message);
             }
