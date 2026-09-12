@@ -7,17 +7,17 @@
     <meta name="description" content="Send dine samlekort til The Poke Bros og få dem indsendt til CGC grading uden selv at skulle samle en stor submission.">
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Svævende Master Ball & Genert flugt-effekt (Stor og tydelig) */
+        /* Svævende Master Ball & Genert flugt-effekt (Placeret perfekt i hjørnet) */
         @keyframes floatMasterBall {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-18px); }
         }
         #easterEggContainer {
-            position: fixed; bottom: 30px; right: 30px; width: 85px; height: 85px;
+            position: fixed; bottom: 50px; right: 50px; width: 85px; height: 85px;
             z-index: 9999; 
             animation: floatMasterBall 3.5s ease-in-out infinite;
-            padding: 40px; 
-            margin: -40px; 
+            padding: 30px; 
+            margin: -30px; 
         }
         #pokeEasterEgg {
             width: 85px; height: 85px; position: relative;
@@ -238,7 +238,7 @@
     <small>Pokémon og CGC er varemærker tilhørende deres respektive ejere.</small>
 </footer>
 
-<!-- Stor, svævende & genert Master Ball med fastlåst størrelse -->
+<!-- Stor, svævende & genert Master Ball (Løftet op i højre hjørne) -->
 <div id="easterEggContainer">
     <div id="pokeEasterEgg" onclick="triggerMasterBallRain()" title="Klik for en overraskelse!">
         <svg viewBox="0 0 100 100" style="width: 85px; height: 85px; min-width: 85px; min-height: 85px; display: block;">
