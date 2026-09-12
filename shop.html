@@ -6,14 +6,21 @@
     <title>Shop | The Poke Bros</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .shop-container { max-width: 1000px; margin: 40px auto; padding: 0 20px; color: #fff; }
+        .shop-container { max-width: 1200px; margin: 40px auto; padding: 0 20px; color: #fff; }
         .shop-header { text-align: center; margin-bottom: 40px; }
-        .shop-header h1 { color: #e63946; margin-bottom: 10px; }
-        .products-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-        .product-card { background: #111318; border: 1px solid #222; border-radius: 12px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: space-between; }
-        .product-card h3 { color: #fff; margin-top: 0; }
-        .price { font-size: 22px; font-weight: bold; color: #e63946; margin: 15px 0; }
-        .shop-msg { text-align: center; color: #aaa; margin-top: 50px; font-size: 16px; background: #111318; padding: 40px; border-radius: 12px; border: 1px solid #222; }
+        .shop-header h1 { color: #fff; font-size: 2.5rem; margin-bottom: 10px; }
+        .shop-header h1 span { color: #e63946; }
+        .shop-header p { color: #aaa; font-size: 1.1rem; }
+        
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 25px; margin-top: 30px; }
+        .product-card { background: #111318; border: 1px solid #222; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, border-color 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .product-card:hover { transform: translateY(-5px); border-color: #e63946; }
+        .product-img { width: 100%; height: 220px; object-fit: cover; background: #1a1e29; display: block; }
+        .product-info { padding: 20px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .product-category { font-size: 12px; color: #e63946; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; margin-bottom: 5px; }
+        .product-title { font-size: 18px; color: #fff; margin: 0 0 10px 0; font-weight: bold; }
+        .product-price { font-size: 22px; color: #fff; font-weight: bold; margin-bottom: 15px; }
+        .product-price span { font-size: 14px; color: #888; font-weight: normal; }
     </style>
 </head>
 <body>
@@ -32,39 +39,82 @@
 
     <main class="shop-container">
         <div class="shop-header">
-            <h1>The Poke Bros Shop</h1>
-            <p>Find lækre rå kort, forseglede produkter og eksklusive tilbud.</p>
+            <h1>The Poke Bros <span>Shop & Medlemskab</span></h1>
+            <p>Køb medlemskab, eksklusive samlekort og tilbehør direkte her fra shoppen.</p>
         </div>
 
-        <div class="products-grid">
-            <!-- Eksempel produktkort - kan udvides eller hentes dynamisk -->
+        <div class="product-grid" id="productGrid">
+            <!-- Medlemskab Årligt (KORREKT PRIS: 599 kr.) -->
             <div class="product-card">
-                <div>
-                    <h3>Poke Bros Medlemskab (Årligt)</h3>
-                    <p style="color: #aaa; font-size: 14px;">Få fast rabat på alle dine CGC-indsendelser og eksklusive fordele hele året.</p>
+                <div style="background: linear-gradient(135deg, #1f1a2e 0%, #111318 100%); height: 220px; display: flex; align-items: center; justify-content: center; color: #e63946; font-size: 48px;">
+                    ⭐
                 </div>
-                <div>
-                    <div class="price">199 kr. / år</div>
-                    <a href="account.html" class="btn" style="width: 100%; text-align: center; box-sizing: border-box; display: block;">Læs mere / Bliv medlem</a>
+                <div class="product-info">
+                    <div>
+                        <div class="product-category">MEDLEMSKAB</div>
+                        <h3 class="product-title">Poke Bros Medlemskab (Årligt)</h3>
+                        <p style="color: #aaa; font-size: 13px; margin-bottom: 15px;">Få fast rabat på alle dine CGC-indsendelser og eksklusive fordele hele året.</p>
+                    </div>
+                    <div>
+                        <div class="product-price">599 kr. <span>/ år</span></div>
+                        <a href="index.html#membership" class="btn" style="width: 100%; box-sizing: border-box; text-align: center; display: block;">Køb Medlemskab</a>
+                    </div>
                 </div>
             </div>
 
+            <!-- Medlemskab Månedligt -->
             <div class="product-card">
-                <div>
-                    <h3>CGC Bulk Gradering (Pakke)</h3>
-                    <p style="color: #aaa; font-size: 14px;">Indsend dine kort i næste fællesforsendelse. Professionel og sikker håndtering.</p>
+                <div style="background: linear-gradient(135deg, #1f1a2e 0%, #111318 100%); height: 220px; display: flex; align-items: center; justify-content: center; color: #e63946; font-size: 48px;">
+                    🚀
                 </div>
-                <div>
-                    <div class="price">Fra 279 kr.</div>
-                    <a href="index.html#order" class="btn" style="width: 100%; text-align: center; box-sizing: border-box; display: block;">Bestil Bulk →</a>
+                <div class="product-info">
+                    <div>
+                        <div class="product-category">MEDLEMSKAB</div>
+                        <h3 class="product-title">Poke Bros Medlemskab (Månedligt)</h3>
+                        <p style="color: #aaa; font-size: 13px; margin-bottom: 15px;">Fleksibelt medlemskab med lavere Bulk-priser og hurtig opsigelse.</p>
+                    </div>
+                    <div>
+                        <div class="product-price">59 kr. <span>/ md.</span></div>
+                        <a href="index.html#membership" class="btn ghost" style="width: 100%; box-sizing: border-box; text-align: center; display: block;">Køb Medlemskab</a>
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <div class="shop-msg">
-            <h3>Flere varer på vej!</h3>
-            <p>Vi opdaterer løbende shoppen med rå Pokémon- og One Piece-kort samt lækkert tilbehør.</p>
         </div>
     </main>
+
+    <script>
+        // Hent dynamiske produkter fra databasen og føj dem til shoppen
+        async function loadShopProducts() {
+            try {
+                const res = await fetch('/api/products');
+                const data = await res.json();
+                if (!res.ok || !data.products || data.products.length === 0) return;
+
+                const grid = document.getElementById('productGrid');
+                
+                data.products.forEach(p => {
+                    const card = document.createElement('div');
+                    card.className = 'product-card';
+                    card.innerHTML = `
+                        <img src="${p.image_url || 'https://via.placeholder.com/400x300?text=The+Poke+Bros'}" class="product-img" alt="${p.title}">
+                        <div class="product-info">
+                            <div>
+                                <div class="product-category">${p.category || 'KORT / SLAB'}</div>
+                                <h3 class="product-title">${p.title}</h3>
+                            </div>
+                            <div>
+                                <div class="product-price">${p.price_dkk.toLocaleString('da-DK')} kr.</div>
+                                <button onclick="alert('Kontakt Thomas på thomaslydholmjob98@gmail.com for køb af dette produkt.')" class="btn" style="width: 100%; box-sizing: border-box;">Køb produkt</button>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                });
+            } catch (e) {
+                console.error('Fejl ved indlæsning af produkter:', e);
+            }
+        }
+        loadShopProducts();
+    </script>
 </body>
 </html>
