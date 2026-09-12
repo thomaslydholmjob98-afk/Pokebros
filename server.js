@@ -26,14 +26,23 @@ app.use(session({
 
 app.use(express.static(__dirname));
 
-// Låst fast til din rigtige admin-kode
+// Sikkerhedstjek for admin adgangskode
 function checkAdmin(req, res, next) {
-    const adminPass = req.headers['x-admin-password'];
+    const adminPass = (req.headers['x-admin-password'] || '').trim();
     if (adminPass !== 'Lydholm9320') {
         return res.status(401).json({ error: 'Ugyldig adgangskode' });
     }
     next();
 }
+
+// Dedikeret Admin Login Tjek
+app.post('/api/admin/login', (req, res) => {
+    const { password } = req.body || {};
+    if ((password || '').trim() === 'Lydholm9320') {
+        return res.json({ success: true });
+    }
+    return res.status(401).json({ error: 'Forkert adgangskode' });
+});
 
 // AI Kort-Vurdering
 app.post('/api/ai-grade', async (req, res) => {
@@ -95,20 +104,40 @@ app.post('/api/admin/pool-status', checkAdmin, async (req, res) => {
     }
 });
 
-// Admin Ordrer & Produkter
+// Admin Dashboard Data
 app.get('/api/admin/orders', checkAdmin, async (req, res) => {
     try {
-        const orders = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
-        const poolRes = await pool.query('SELECT count FROM pool_status WHERE id = 1');
-        const membersRes = await pool.query('SELECT COUNT(*) FROM users WHERE membership_active = true');
-        const revenueRes = await pool.query("SELECT SUM(total_dkk) FROM orders WHERE payment_status = 'paid'");
+        let orders = { rows: [], rowCount: 0 };
+        let poolCards = 0;
+        let members = 0;
+        let paidRevenueDkk = 0;
+
+        try {
+            const ordersRes = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
+            orders = ordersRes;
+        } catch (e) { console.error('Ordre tabel fejl:', e.message); }
+
+        try {
+            const poolRes = await pool.query('SELECT count FROM pool_status WHERE id = 1');
+            poolCards = poolRes.rows[0]?.count || 0;
+        } catch (e) {}
+
+        try {
+            const membersRes = await pool.query('SELECT COUNT(*) FROM users WHERE membership_active = true');
+            members = membersRes.rows[0]?.count || 0;
+        } catch (e) {}
+
+        try {
+            const revenueRes = await pool.query("SELECT SUM(total_dkk) FROM orders WHERE payment_status = 'paid'");
+            paidRevenueDkk = revenueRes.rows[0]?.sum || 0;
+        } catch (e) {}
 
         res.json({
             orders: orders.rows,
             stats: {
-                poolCards: poolRes.rows[0]?.count || 0,
-                members: membersRes.rows[0]?.count || 0,
-                paidRevenueDkk: revenueRes.rows[0]?.sum || 0,
+                poolCards,
+                members,
+                paidRevenueDkk,
                 orders: orders.rowCount
             },
             statuses: {
@@ -146,7 +175,7 @@ app.post('/api/admin/products', checkAdmin, async (req, res) => {
     }
 });
 
-// Checkout & Betaling
+// Checkout
 app.post('/api/checkout', async (req, res) => {
     try {
         const { name, email, phone, address, postal, city, qty, tier, shippingMethod, notes, coupon } = req.body;
