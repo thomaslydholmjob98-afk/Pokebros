@@ -1,66 +1,39 @@
 <!doctype html><html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Poke Bros | CGC Grading Service</title><meta name="description" content="Send dine samlekort til The Poke Bros og få dem indsendt til CGC grading uden selv at skulle samle en stor submission."><link rel="stylesheet" href="style.css">
 <style>
-    /* Styling til den svævende Pokéball (nederste hjørne) */
+    /* Svævende Pokéball */
     #pokeEasterEgg {
         position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px;
         background: linear-gradient(to bottom, #ff2a2a 0%, #ff2a2a 50%, #f0f0f0 50%, #f0f0f0 100%);
-        border-radius: 50%; border: 3px solid #1a1a1a;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.5); cursor: pointer; z-index: 9999;
-        display: flex; align-items: center; justify-content: center; transition: transform 0.3s ease;
+        border-radius: 50%; border: 3px solid #1a1a1a; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        cursor: pointer; z-index: 9999; display: flex; align-items: center; justify-content: center; transition: transform 0.3s ease;
     }
-    #pokeEasterEgg::before {
-        content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        border-radius: 50%; box-shadow: inset 0 6px 12px rgba(255,255,255,0.4); pointer-events: none;
-    }
-    /* Midterbælte og knap på Pokéball */
-    .poke-belt {
-        position: absolute; top: 50%; left: 0; width: 100%; height: 8px;
-        background: #1a1a1a; transform: translateY(-50%);
-    }
-    .poke-button {
-        position: absolute; top: 50%; left: 50%; width: 18px; height: 18px;
-        background: #fff; border: 3px solid #1a1a1a; border-radius: 50%;
-        transform: translate(-50%, -50%); box-shadow: inset 0 0 0 2px #ddd;
-        z-index: 2;
-    }
+    #pokeEasterEgg::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; box-shadow: inset 0 6px 12px rgba(255,255,255,0.4); pointer-events: none; }
+    .poke-belt { position: absolute; top: 50%; left: 0; width: 100%; height: 8px; background: #1a1a1a; transform: translateY(-50%); }
+    .poke-button { position: absolute; top: 50%; left: 50%; width: 18px; height: 18px; background: #fff; border: 3px solid #1a1a1a; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: inset 0 0 0 2px #ddd; z-index: 2; }
+    #pokeEasterEgg:hover { transform: scale(1.15) rotate(15deg); }
 
-    /* Master Ball regnvejr (med M og lyserøde detaljer) */
-    @keyframes fall {
-        0% { transform: translateY(-60px) rotate(0deg); opacity: 1; }
-        100% { transform: translateY(105vh) rotate(360deg); opacity: 0; }
-    }
+    /* Master Ball regnvejr */
+    @keyframes fall { 0% { transform: translateY(-60px) rotate(0deg); opacity: 1; } 100% { transform: translateY(105vh) rotate(360deg); opacity: 0; } }
     .falling-masterball {
         position: fixed; top: -60px; width: 40px; height: 40px;
         background: linear-gradient(to bottom, #7b2cbf 0%, #7b2cbf 50%, #f0f0f0 50%, #f0f0f0 100%);
-        border-radius: 50%; border: 2px solid #1a1a1a;
-        box-shadow: 0 3px 10px rgba(0,0,0,0.4); z-index: 9998; pointer-events: none;
-        animation: fall linear forwards;
+        border-radius: 50%; border: 2px solid #1a1a1a; box-shadow: 0 3px 10px rgba(0,0,0,0.4); z-index: 9998; pointer-events: none; animation: fall linear forwards;
     }
-    /* Master Ball bælte */
-    .falling-masterball::before {
-        content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 5px;
-        background: #1a1a1a; transform: translateY(-50%);
-    }
-    /* Master Ball knap */
-    .falling-masterball::after {
-        content: ''; position: absolute; top: 50%; left: 50%; width: 12px; height: 12px;
-        background: #fff; border: 2px solid #1a1a1a; border-radius: 50%;
-        transform: translate(-50%, -50%); z-index: 2;
-    }
-    #pokeEasterEgg:hover { transform: scale(1.15) rotate(15deg); }
+    .falling-masterball::before { content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 5px; background: #1a1a1a; transform: translateY(-50%); }
+    .falling-masterball::after { content: ''; position: absolute; top: 50%; left: 50%; width: 12px; height: 12px; background: #fff; border: 2px solid #1a1a1a; border-radius: 50%; transform: translate(-50%, -50%); z-index: 2; }
 </style>
 </head><body>
 <header><a class="brand" href="#">THE POKE BROS</a><nav><a href="#how">Sådan virker det</a><a href="#prices">Priser</a><a href="#membership">Bliv en Poke Bro</a><a href="shop.html">Shop</a><a href="/selg.html">Sælg din samling</a><a href="#faq">FAQ</a><a href="track.html">Spor ordre</a><a href="#contact">Kontakt</a><a href="account.html" id="accountLink">Min konto</a></nav><a class="btn small" href="#order">Bestil grading</a></header>
-<main><section class="hero"><div class="hero-img"></div><div class="shade"></div><div class="hero-copy"><span class="eyebrow">CGC GRADING • NEMT FOR DANSKE SAMLERE</span><h1>Få dine kort graded<br>uden en stor submission.</h1><p>Send het antal kort, du ønsker, til The Poke Bros. Vi samler kundernes kort og håndterer submissionen til CGC.</p><div class="actions"><a class="btn" href="#order">Send kort til grading</a><a class="btn ghost" href="#how">Sådan fungerer det</a></div></div></section>
+<main><section class="hero"><div class="hero-img"></div><div class="shade"></div><div class="hero-copy"><span class="eyebrow">CGC GRADING • NEMT FOR DANSKE SAMLERE</span><h1>Få dine kort graded<br>uden en stor submission.</h1><p>Send det antal kort, du ønsker, til The Poke Bros. Vi samler kundernes kort og håndterer submissionen til CGC.</p><div class="actions"><a class="btn" href="#order">Send kort til grading</a><a class="btn ghost" href="#how">Sådan fungerer det</a></div></div></section>
 
-<!-- CGC Submission Progress Tracker -->
-<section style="background: #ffffff; padding: 25px 20px; border-bottom: 1px solid #e1e8ed; text-align: center;">
+<!-- CGC Submission Progress Tracker (Matcher det mørke design) -->
+<section style="background: #111318; padding: 30px 20px; border-bottom: 1px solid #222; text-align: center;">
     <div style="max-width: 600px; margin: 0 auto;">
         <span class="eyebrow" style="color: #e63946; font-weight: bold; font-size: 12px; letter-spacing: 1px;">NÆSTE CGC BULK-AFSENDELSE</span>
-        <h3 style="margin: 8px 0; font-size: 20px; color: #1a1a1a;">Puljestatus: <span id="poolCount">18</span> / 25 kort samlet</h3>
-        <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Vi sender næste kasse til CGC så snart puljen når 25 kort. Bestil i dag for at nå med!</p>
-        <div style="background: #e9ecef; border-radius: 20px; height: 16px; width: 100%; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
-            <div id="poolBar" style="background: linear-gradient(90deg, #e63946, #ff4d5a); height: 100%; width: 72%; border-radius: 20px; transition: width 0.5s ease;"></div>
+        <h3 style="margin: 8px 0; font-size: 20px; color: #fff;">Puljestatus: <span id="poolCount">0</span> / 25 kort samlet</h3>
+        <p style="color: #aaa; font-size: 14px; margin-bottom: 15px;">Vi sender næste kasse til CGC så snart puljen når 25 kort. Bestil i dag for at nå med!</p>
+        <div style="background: #222633; border-radius: 20px; height: 16px; width: 100%; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
+            <div id="poolBar" style="background: linear-gradient(90deg, #e63946, #ff4d5a); height: 100%; width: 0%; border-radius: 20px; transition: width 0.5s ease;"></div>
         </div>
     </div>
 </section>
@@ -92,26 +65,38 @@
 </form></div></section>
 
 <section class="section status-cta"><span class="eyebrow">FØLG DINE KORT</span><h2>Se hvor din grading er i processen</h2><p class="lead">Når du har bestilt, kan du følge ordren fra vi modtager dine kort, til de er sendt til CGC og retur til dig.</p><a class="btn" href="track.html">Spor min ordre</a></section>
-<section id="faq" class="section alt"><span class="eyebrow">FAQ</span><h2>Ofte stillede spørgsmål</h2><details><summary>Hvordan virker Poke Bro-medlemskabet?</summary><p>Medlemskabet koster 59 kr. pr. måned eller 599 kr. pr. år. Aktive medlemmer får Bulk til 249 kr. pr. kort og medlemsfordele. Abonnementet fortsætter, indtil det opsiges.</p></details><details><summary>Skal jeg sende 25 kort?</summary><p>Nej. Du kan sende helt ned til 1 kort. Vi samler kort fra flere kunder og sender til CGC, når den fælles Bulk-submission er klar.</p></details><details><summary>Hvornår bliver mine kort sendt til CGC?</summary><p>Bulk sendes samlet, når ordremængden passer til en fælles CGC-submission. Andre tiers håndteres efter den valgte service. Vi sigter mod et samlet forløb på højst 4 måneder, men CGC-, told- og transportforsinkelser ligger uden for vores direkte kontrol. Du får status undervejs.</p></details><details><summary>Hvilke kort kan bruge 279 kr.-prisen?</summary><p>Prisen er baseret på CGC Bulk, som på den aktuelle CGC-prisliste har en maksimal deklareret værdi på $500 pr. kort. Dyrere kort kræver en anden tier og aftales særskilt.</p></details><details><summary>Hvordan sender jeg mine kort sikkert?</summary><p>Efter bestilling får du konkrete pakkeinstruktioner. Brug altid en forsendelsesmetode, der passer til kortenes værdi.</p></details><details><summary>Er The Poke Bros CGC?</summary><p>Nej. The Poke Bros er en uafhængig indsendelsesservice. Selve gradingen udføres af CGC.</p></details></section>
+<section id="faq" class="section alt"><span class="eyebrow">FAQ</span><h2>Ofte stillede spørgsmål</h2><details><summary>Hvordan virker Poke Bro-medlemskabet?</summary><p>Medlemskabet koster 59 kr. pr. måned eller 599 kr. pr. år. Aktive medlemmer får Bulk til 249 kr. pr. kort og medlemsfordele. Abonnementet fortsætter, indtil det opsiges.</p></details><details><summary>Skal jeg sende 25 kort?</summary><p>Nej. Du kan sende helt ned til 1 kort. Vi samler kort fra flere kunder og sender til CGC, når den fælles Bulk-submission er klar.</p></details><details><summary>Hvornår bliver mine kort sendt til CGC?</summary><p>Bulk sendes samlet, når ordremængden passer til en fælles CGC-submission. Andre tiers håndteres efter den valgte service. Vi sigter mod et samlet forløb på højst 4 måneder, men CGC-, told- og transportforsinkelser ligger uden for vores direkte kontrol. Du får status undervejs.</p></details><details><summary>Hvilke kort kan bruge 279 kr.-prisen?</summary><p>Prisen er baseret på CGC Bulk, som på den aktuelle prisliste har en maksimal deklareret værdi på $500 pr. kort. Dyrere kort kræver en anden tier og aftales særskilt.</p></details><details><summary>Hvordan sender jeg mine kort sikkert?</summary><p>Efter bestilling får du konkrete pakkeinstruktioner. Brug altid en forsendelsesmetode, der passer til kortenes værdi.</p></details><details><summary>Er The Poke Bros CGC?</summary><p>Nej. The Poke Bros er en uafhængig indsendelsesservice. Selve gradingen udføres af CGC.</p></details></section>
 <section id="contact" class="section contact"><span class="eyebrow">KONTAKT</span><h2>Har du spørgsmål til din submission?</h2><p>Kontakt The Poke Bros på e-mail eller telefon.</p><div class="actions" style="justify-content:center"><a class="btn ghost" href="mailto:Thomaslydholmjob98@gmail.com">Thomaslydholmjob98@gmail.com</a><a class="btn ghost" href="tel:91626400">91 62 64 00</a></div></section></main>
 
-<footer><b>THE POKE BROS</b><span>Uafhængig grading-indsendelsesservice • thepokebros.com</span><small>Pokémon og CGC er varemærker tilhørende deres respektive ejere. The Poke Bros er ikke tilknyttet eller sponsoreret af Pokémon Company. Eventuel relation til CGC bør beskrives i overensstemmelse med din konkrete medlems-/forhandleraftale.</small></footer>
+<footer><b>THE POKE BROS</b><span>Uafhængig grading-indsendelsesservice • thepokebros.com</span><small>Pokémon og CGC er varemærker tilhørende deres respektive ejere. The Poke Bros er ikke tilknyttet eller sponsoreret af Pokémon Company.</small></footer>
 
-<!-- Svævende rigtig Pokéball med bælte og knap -->
+<!-- Svævende Pokéball -->
 <div id="pokeEasterEgg" onclick="triggerMasterBallRain()" title="Klik for en overraskelse!">
     <div class="poke-belt"></div>
     <div class="poke-button"></div>
 </div>
 
 <!-- Besked-boks -->
-<div id="masterBallModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a1a; color: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 10000; text-align: center; max-width: 400px; width: 90%; border: 3px solid #7b2cbf;">
+<div id="masterBallModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #111318; color: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 10000; text-align: center; max-width: 400px; width: 90%; border: 3px solid #7b2cbf;">
     <h2 style="color: #9d4edd; margin-top: 0;">⚡ MASTER BALL AKTIVERET! ⚡</h2>
     <p style="font-size: 15px;">Du fandt det nørdede påskeæg! Som ægte Pokémon Master får du <strong>10% rabat</strong> på din allerførste ordre.</p>
-    <code style="background: #2a2a2a; padding: 6px 12px; font-size: 18px; font-weight: bold; color: #9d4edd; border-radius: 4px; display: inline-block; margin: 10px 0; border: 1px solid #7b2cbf;">MASTER2026</code><br>
+    <code style="background: #222633; padding: 6px 12px; font-size: 18px; font-weight: bold; color: #9d4edd; border-radius: 4px; display: inline-block; margin: 10px 0; border: 1px solid #7b2cbf;">MASTER2026</code><br>
     <button onclick="closeMasterBallModal()" class="btn" style="background: #7b2cbf; color: #fff; margin-top: 10px;">Tak, lad mig fange dem alle!</button>
 </div>
 
 <script>
+async function loadPoolStatus() {
+    try {
+        const res = await fetch('/api/pool-status');
+        const data = await res.json();
+        const count = data.count || 0;
+        document.getElementById('poolCount').textContent = count;
+        const percentage = Math.min(100, (count / 25) * 100);
+        document.getElementById('poolBar').style.width = percentage + '%';
+    } catch (e) { console.error('Kunne ikke hente pulje'); }
+}
+loadPoolStatus();
+
 function triggerMasterBallRain() {
     const egg = document.getElementById('pokeEasterEgg');
     egg.style.transform = 'scale(0.8)';
@@ -124,24 +109,18 @@ function triggerMasterBallRain() {
         ball.style.animationDuration = (Math.random() * 2 + 1.5) + 's';
         ball.style.animationDelay = (Math.random() * 0.5) + 's';
         document.body.appendChild(ball);
-
         setTimeout(() => { ball.remove(); }, 3500);
     }
-
-    setTimeout(() => {
-        document.getElementById('masterBallModal').style.display = 'block';
-    }, 600);
+    setTimeout(() => { document.getElementById('masterBallModal').style.display = 'block'; }, 600);
 }
 
-function closeMasterBallModal() {
-    document.getElementById('masterBallModal').style.display = 'none';
-}
+function closeMasterBallModal() { document.getElementById('masterBallModal').style.display = 'none'; }
 
 const basePrices={bulk:279,economy:299,standard:499,express:899,walkthrough:2199,unlimited:2199};
 let prices={...basePrices},me=null;
-const notes={bulk:'Bulk: maks. deklareret værdi $500 pr. kort.',economy:'Economy: maks. deklareret værdi $1.000 pr. kort.',standard:'Standard: maks. deklareret værdi $3.000 pr. kort.',express:'Express: maks. deklareret værdi $10.000 pr. kort.',walkthrough:'WalkThrough: maks. deklareret værdi $100.000 pr. kort.',unlimited:'Unlimited Value: CGC opkræver desuden 0,9 % af Fair Market Value. Den variable afgift afregnes særskilt.'};
+const notes={bulk:'Bulk: maks. deklareret værdi $500 pr. kort.',economy:'Economy: maks. deklareret værdi $1.000 pr. kort.',standard:'Standard: maks. deklareret værdi $3.000 pr. kort.',express:'Express: maks. deklareret værdi $10.000 pr. kort.',walkthrough:'WalkThrough: maks. deklareret værdi $100.000 pr. kort.',unlimited:'Unlimited Value: CGC opkræver desuden 0,9 % af Fair Market Value.'};
 const q=document.getElementById('qty'),tier=document.getElementById('tier'),t=document.getElementById('total'),g=document.getElementById('gradingTotal'),note=document.getElementById('tierNote');
-function calc(){let n=Math.max(1,Math.min(100,parseInt(q.value)||1));q.value=n;let p=prices[tier.value];g.textContent=(n*p).toLocaleString('da-DK')+' kr.'+(tier.value==='unlimited'?' + FMV-tillæg':'');t.textContent=(n*p+69).toLocaleString('da-DK')+' kr.'+(tier.value==='unlimited'?' + FMV-tillæg':'');note.textContent=notes[tier.value]+' Du betaler selv forsendelsen af kortene til The Poke Bros.'+(me?.membership?.active?' Aktiv Poke Bro-medlemspris er anvendt.':'')}
+function calc(){let n=Math.max(1,Math.min(100,parseInt(q.value)||1));q.value=n;let p=prices[tier.value];g.textContent=(n*p).toLocaleString('da-DK')+' kr.';t.textContent=(n*p+69).toLocaleString('da-DK')+' kr.';note.textContent=notes[tier.value]+' Du betaler selv forsendelsen af kortene til The Poke Bros.'+(me?.membership?.active?' Aktiv Poke Bro-medlemspris er anvendt.':'')}
 document.getElementById('minus').onclick=()=>{q.value=Math.max(1,+q.value-1);calc()};document.getElementById('plus').onclick=()=>{q.value=Math.min(100,+q.value+1);calc()};q.oninput=calc;tier.onchange=calc;
 async function loadAccount(){try{const j=await fetch('/api/auth/me').then(r=>r.json());if(j.loggedIn){me=j.user;accountLink.textContent='Min konto';const form=document.getElementById('checkoutForm');form.elements.name.value=me.name||'';form.elements.email.value=me.email||'';form.elements.phone.value=me.phone||'';if(me.membership?.active){prices={bulk:249,economy:Math.round(299*.95),standard:Math.round(499*.95),express:Math.round(899*.95),walkthrough:Math.round(2199*.95),unlimited:Math.round(2199*.95)};document.querySelector('#membership .lead').textContent='Du er aktiv Poke Bro. Din medlemspris anvendes automatisk, når du bestiller med din konto.';}}else{accountLink.textContent='Log ind';accountLink.href='login.html'}calc()}catch{calc()}}
 loadAccount();
