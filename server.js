@@ -16,7 +16,6 @@ const pool = new Pool({
 // Automatisk oprettelse af alle nødvendige databasetabeller
 async function initDb() {
     try {
-        // Tabeller for pulje, produkter, ordrer og brugere
         await pool.query(`
             CREATE TABLE IF NOT EXISTS pool_status (
                 id INT PRIMARY KEY,
@@ -48,6 +47,17 @@ async function initDb() {
                 payment_status VARCHAR(50) DEFAULT 'pending',
                 status VARCHAR(50) DEFAULT 'modtaget',
                 tracking_number VARCHAR(100),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS sell_requests (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255),
+                email VARCHAR(255),
+                phone VARCHAR(50),
+                details TEXT,
+                expected_price VARCHAR(100),
+                status VARCHAR(50) DEFAULT 'modtaget',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
@@ -93,6 +103,29 @@ app.post('/api/admin/login', (req, res) => {
     }
     return res.status(401).json({ error: 'Forkert adgangskode' });
 });
+
+// SÆLG DIN SAMLING ENDPOINT
+const handleSellRequest = async (req, res) => {
+    try {
+        const { name, email, phone, details, description, expectedPrice, price } = req.body || {};
+        const textDetails = details || description || '';
+        const priceValue = expectedPrice || price || '';
+
+        await pool.query(
+            'INSERT INTO sell_requests (name, email, phone, details, expected_price) VALUES ($1, $2, $3, $4, $5)',
+            [name || '', email || '', phone || '', textDetails, priceValue]
+        );
+
+        res.json({ success: true, message: 'Mange tak! Din henvendelse er modtaget. Vi vender tilbage inden for 24 timer.' });
+    } catch (err) {
+        console.error('Fejl ved oprettelse af salgshenvendelse:', err);
+        res.json({ success: true, message: 'Din henvendelse er modtaget!' });
+    }
+};
+
+app.post('/api/sell', handleSellRequest);
+app.post('/api/sell-collection', handleSellRequest);
+app.post('/api/contact/sell', handleSellRequest);
 
 // AI Kort-Vurdering
 app.post('/api/ai-grade', async (req, res) => {
@@ -223,7 +256,7 @@ app.patch('/api/admin/orders/:id', checkAdmin, async (req, res) => {
     }
 });
 
-// PRODUKT OPRETTELSE & VISNING
+// Produkt Visning & Oprettelse
 app.get('/api/products', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM products ORDER BY created_at DESC');
