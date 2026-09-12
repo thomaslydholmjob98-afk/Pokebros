@@ -87,6 +87,25 @@ app.post('/api/admin/pool-status', async (req, res) => {
     } catch (e) { res.status(500).json({ error: 'Fejl.' }); }
 });
 
+// Offentlig rute til pakkeseddel
+app.get('/api/track-public/:id', async (req, res) => {
+    try {
+        const id = String(req.params.id || '').trim().toUpperCase();
+        const r = await db.query('SELECT * FROM orders WHERE order_id=$1', [id]);
+        if (!r.rows[0]) return res.status(404).json({ error: 'Ordren blev ikke fundet.' });
+        const o = r.rows[0], t = await db.query('SELECT at,status,label,note FROM order_timeline WHERE order_id=$1 ORDER BY at', [id]);
+        res.json({
+            orderId: o.order_id, createdAt: o.created_at, qty: o.qty, tier: o.tier,
+            totalDkk: o.total_dkk, paymentStatus: o.payment_status, status: o.status,
+            statusLabel: STATUS[o.status] || o.status, customer_name: o.customer_name,
+            customer_email: o.customer_email, customer_address: o.customer_address,
+            customer_postal: o.customer_postal, customer_city: o.customer_city, notes: o.notes, timeline: t.rows
+        });
+    } catch (e) {
+        res.status(500).json({ error: 'Fejl ved hentning af ordre.' });
+    }
+});
+
 app.get('/api/products', async (req, res) => {
     try { const r = await db.query('SELECT * FROM products WHERE sold=FALSE ORDER BY created_at DESC'); res.json(r.rows); } catch (err) { res.status(500).json({ error: 'Fejl' }); }
 });
@@ -127,7 +146,6 @@ app.get('/api/account',async(req,res)=>{const u=await sessionUser(req);if(!u)ret
 app.post('/api/membership-checkout',async(req,res)=>{try{const u=await sessionUser(req);if(!u)return res.status(401).json({error:'Log ind.'});const plan=req.body?.plan==='yearly'?'yearly':'monthly',amount=plan==='yearly'?59900:5900,interval=plan==='yearly'?'year':'month',stripe=require('stripe')(process.env.STRIPE_SECRET_KEY),base=(process.env.PUBLIC_URL||`${req.protocol}://${req.get('host')}`).replace(/\/$/,'');const s=await stripe.checkout.sessions.create({mode:'subscription',customer_email:u.email,line_items:[{price_data:{currency:'dkk',product_data:{name:'Poke Bro medlemskab'},unit_amount:amount,recurring:{interval}},quantity:1}],metadata:{type:'membership',plan,userId:u.id},success_url:`${base}/account.html?membership=success`,cancel_url:`${base}/#membership`});res.json({url:s.url})}catch(e){res.status(500).json({error:'Fejl'})}});
 app.post('/api/confirm-membership',async(req,res)=>{try{const u=await sessionUser(req);if(!u)return res.status(401).json({error:'Log ind.'});const stripe=require('stripe')(process.env.STRIPE_SECRET_KEY),s=await stripe.checkout.sessions.retrieve(String(req.body?.sessionId||''));if(s.metadata?.userId===u.id)await activateMembership(u.email,s.metadata.plan,s.customer,s.subscription);res.json({user:publicUser((await db.query('SELECT * FROM users WHERE id=$1',[u.id])).rows[0])})}catch(e){res.status(500).json({error:'Fejl'})}});
 
-// CHECKOUT MED MASTERBALL-RABATKODE (Kræver login og kan kun bruges én gang pr. bruger)
 app.post('/api/checkout',async(req,res)=>{try{
     const u=await sessionUser(req),qty=Math.max(1,Math.min(100,Number(req.body.qty)||1));
     const {name,email,phone,address,postal,city,notes,coupon}=req.body;
