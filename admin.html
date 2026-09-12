@@ -127,7 +127,7 @@
             </div>
         </div>
 
-        <!-- Facebook & Discord Opslag Generator (Indbygget) -->
+        <!-- Facebook & Discord Opslag Generator -->
         <div class="admin-card">
             <h2>Sociale Medier Opslag Generator</h2>
             <p style="color: #aaa; font-size: 14px; margin-bottom: 20px;">Generér hurtigt et opslag til Facebook-grupper eller Discord, når I samler kort til næste pulje.</p>
@@ -192,13 +192,11 @@
         async function loadDashboardData(response) {
             const data = await response || await fetch('/api/admin/orders', { headers: { 'x-admin-password': adminPass } }).then(r => r.json());
             
-            // Opdatér statistik
             document.getElementById('statRevenue').textContent = (data.stats.paidRevenueDkk || 0).toLocaleString('da-DK') + ' kr.';
             document.getElementById('statOrders').textContent = data.stats.orders || 0;
             document.getElementById('statPool').textContent = (data.stats.poolCards || 0) + ' stk.';
             document.getElementById('statMembers').textContent = data.stats.members || 0;
 
-            // Sæt også puljeantallet ind i generatoren automatisk
             document.getElementById('genPoolCount').value = data.stats.poolCards || 0;
             generatePost();
 
@@ -296,7 +294,7 @@
 
             const text = `🔥 CGC GRADING MED THE POKE BROS 🔥
 
-Vil du have dine Pokémon- eller One Piece-kort graded hos CGC uden at skulle samle en store submission selv? Hos The Poke Bros kan du sende fra bare 1 kort!
+Vil du have dine Pokémon- eller One Piece-kort graded hos CGC uden at skulle samle en stor submission selv? Hos The Poke Bros kan du sende fra bare 1 kort!
 
 📦 Nuværende puljestatus: ${count} / 25 kort samlet! Vi sender afsted, så snart puljen er fyldt.
 
