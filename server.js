@@ -28,6 +28,7 @@ async function initDb() {
                 category VARCHAR(100),
                 price_dkk INT NOT NULL,
                 image_url TEXT,
+                status VARCHAR(50) DEFAULT 'til salg',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -62,11 +63,10 @@ async function initDb() {
             );
         `);
 
-        // Sørg for at id har en sequence (auto-increment) og image_url er TEXT
+        // Sikr at nødvendige kolonner findes og understøtter det rette format
         await pool.query(`
-            CREATE SEQUENCE IF NOT EXISTS products_id_seq;
-            ALTER TABLE products ALTER COLUMN id SET DEFAULT nextval('products_id_seq');
             ALTER TABLE products ALTER COLUMN image_url TYPE TEXT;
+            ALTER TABLE products ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'til salg';
         `).catch(() => {});
 
         await pool.query(`
@@ -342,13 +342,38 @@ app.post('/api/admin/products', checkAdmin, async (req, res) => {
     try {
         const numericPrice = parseInt(priceDkk, 10);
         await pool.query(
-            'INSERT INTO products (title, category, price_dkk, image_url) VALUES ($1, $2, $3, $4)',
-            [title, category || 'Diverse', numericPrice, imageUrl || '']
+            'INSERT INTO products (title, category, price_dkk, image_url, status) VALUES ($1, $2, $3, $4, $5)',
+            [title, category || 'Diverse', numericPrice, imageUrl || '', 'til salg']
         );
         res.json({ success: true });
     } catch (e) {
         console.error('Produkt oprettelsesfejl:', e.message);
         res.status(500).json({ error: 'Kunne ikke oprette produkt i databasen: ' + e.message });
+    }
+});
+
+// ADMIN: OPDATÉR PRODUKT STATUS (FX SOLGT)
+app.patch('/api/admin/products/:id', checkAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    try {
+        await pool.query('UPDATE products SET status = $1 WHERE id = $2', [status, id]);
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Fejl ved opdatering af produkt status:', e.message);
+        res.status(500).json({ error: 'Kunne ikke opdatere status: ' + e.message });
+    }
+});
+
+// ADMIN: SLET PRODUKT
+app.delete('/api/admin/products/:id', checkAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+        await pool.query('DELETE FROM products WHERE id = $1', [id]);
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Fejl ved sletning af produkt:', e.message);
+        res.status(500).json({ error: 'Kunne ikke slette produkt' });
     }
 });
 
@@ -396,30 +421,7 @@ app.post('/api/checkout', async (req, res) => {
         res.status(500).json({ error: 'Kunne ikke oprette betaling.' });
     }
 });
-// SLET PRODUKT
-app.delete('/api/admin/products/:id', checkAdmin, async (req, res) => {
-    const { id } = req.params;
-    try {
-        await pool.query('DELETE FROM products WHERE id = $1', [id]);
-        res.json({ success: true });
-    } catch (e) {
-        console.error('Fejl ved sletning af produkt:', e.message);
-        res.status(500).json({ error: 'Kunne ikke slette produkt' });
-    }
-});
 
-// OPDATÉR PRODUKT STATUS (FX SOLGT)
-app.patch('/api/admin/products/:id', checkAdmin, async (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body;
-    try {
-        await pool.query('UPDATE products SET status = $1 WHERE id = $2', [status, id]);
-        res.json({ success: true });
-    } catch (e) {
-        console.error('Fejl ved opdatering af produkt status:', e.message);
-        res.status(500).json({ error: 'Kunne ikke opdatere status' });
-    }
-});
 app.listen(port, () => {
     console.log(`Server kører på port ${port}`);
 });
