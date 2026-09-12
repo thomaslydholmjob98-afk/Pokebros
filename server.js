@@ -24,22 +24,18 @@ app.use(session({
     cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 }
 }));
 
-// Statiske filer
 app.use(express.static(__dirname));
 
-// Sikkerhedstjek for admin adgangskode ('Lydholm9320')
+// Låst fast til din rigtige admin-kode
 function checkAdmin(req, res, next) {
     const adminPass = req.headers['x-admin-password'];
-    const expectedPass = process.env.ADMIN_PASSWORD || 'Lydholm9320';
-    if (adminPass !== expectedPass && adminPass !== 'Lydholm9320') {
+    if (adminPass !== 'Lydholm9320') {
         return res.status(401).json({ error: 'Ugyldig adgangskode' });
     }
     next();
 }
 
-// -------------------------------------------------------------
-// AI KORT-VURDERING (PRE-GRADE)
-// -------------------------------------------------------------
+// AI Kort-Vurdering
 app.post('/api/ai-grade', async (req, res) => {
     try {
         const { imageBase64, cardName } = req.body || {};
@@ -78,9 +74,7 @@ app.post('/api/ai-grade', async (req, res) => {
     }
 });
 
-// -------------------------------------------------------------
-// PULJE STATUS API
-// -------------------------------------------------------------
+// Pulje Status
 app.get('/api/pool-status', async (req, res) => {
     try {
         const result = await pool.query('SELECT count FROM pool_status WHERE id = 1');
@@ -101,9 +95,7 @@ app.post('/api/admin/pool-status', checkAdmin, async (req, res) => {
     }
 });
 
-// -------------------------------------------------------------
-// ADMIN ORDRER & PRODUKTER API
-// -------------------------------------------------------------
+// Admin Ordrer & Produkter
 app.get('/api/admin/orders', checkAdmin, async (req, res) => {
     try {
         const orders = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
@@ -136,12 +128,8 @@ app.patch('/api/admin/orders/:id', checkAdmin, async (req, res) => {
     const { id } = req.params;
     const { status, trackingNumber } = req.body;
     try {
-        if (status) {
-            await pool.query('UPDATE orders SET status = $1 WHERE order_id = $2', [status, id]);
-        }
-        if (trackingNumber !== undefined) {
-            await pool.query('UPDATE orders SET tracking_number = $1 WHERE order_id = $2', [trackingNumber, id]);
-        }
+        if (status) await pool.query('UPDATE orders SET status = $1 WHERE order_id = $2', [status, id]);
+        if (trackingNumber !== undefined) await pool.query('UPDATE orders SET tracking_number = $1 WHERE order_id = $2', [trackingNumber, id]);
         res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: 'Kunne ikke opdatere ordre' });
@@ -151,33 +139,19 @@ app.patch('/api/admin/orders/:id', checkAdmin, async (req, res) => {
 app.post('/api/admin/products', checkAdmin, async (req, res) => {
     const { title, category, priceDkk, imageUrl } = req.body;
     try {
-        await pool.query(
-            'INSERT INTO products (title, category, price_dkk, image_url) VALUES ($1, $2, $3, $4)',
-            [title, category, priceDkk, imageUrl]
-        );
+        await pool.query('INSERT INTO products (title, category, price_dkk, image_url) VALUES ($1, $2, $3, $4)', [title, category, priceDkk, imageUrl]);
         res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: 'Kunne ikke oprette produkt' });
     }
 });
 
-// -------------------------------------------------------------
-// STRIPE CHECKOUT & ORDRE API
-// -------------------------------------------------------------
+// Checkout & Betaling
 app.post('/api/checkout', async (req, res) => {
     try {
         const { name, email, phone, address, postal, city, qty, tier, shippingMethod, notes, coupon } = req.body;
-        
         const basePrices = { bulk: 279, economy: 299, standard: 499, express: 899, walkthrough: 2199, unlimited: 2199 };
         let pricePerCard = basePrices[tier] || 279;
-
-        if (req.session.userId) {
-            const userRes = await pool.query('SELECT membership_active FROM users WHERE id = $1', [req.session.userId]);
-            if (userRes.rows[0]?.membership_active) {
-                if (tier === 'bulk') pricePerCard = 249;
-                else pricePerCard = Math.round(pricePerCard * 0.95);
-            }
-        }
 
         let subtotal = qty * pricePerCard;
         let shipPrice = shippingMethod === 'hjemmelevering' ? 69 : 49;
