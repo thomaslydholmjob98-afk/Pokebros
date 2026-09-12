@@ -146,7 +146,7 @@ app.get('/api/admin/users', checkAdmin, async (req, res) => {
     }
 });
 
-// ADMIN: OPDATÉR BRUGER MEDLEMSKAB
+// ADMIN: OPDATÉR BRUGER MEDLEMSKAB / GIV GRATIS
 app.patch('/api/admin/users/:id', checkAdmin, async (req, res) => {
     const { id } = req.params;
     const { membership_active, membership_plan } = req.body;
@@ -161,13 +161,20 @@ app.patch('/api/admin/users/:id', checkAdmin, async (req, res) => {
     }
 });
 
-// ADMIN: SLET BRUGER
+// ADMIN: SLET BRUGER (Sletter først evt. ordrer tilknyttet e-mailen for at undgå foreign key fejl)
 app.delete('/api/admin/users/:id', checkAdmin, async (req, res) => {
     const { id } = req.params;
     try {
+        const userRes = await pool.query('SELECT email FROM users WHERE id = $1', [id]);
+        if (userRes.rows.length > 0) {
+            const email = userRes.rows.get ? userRes.rows[0].email : userRes.rows[0].email;
+            // Slet eller frigiv ordrer knyttet til e-mailen
+            await pool.query('DELETE FROM orders WHERE customer_email = $1', [email]);
+        }
         await pool.query('DELETE FROM users WHERE id = $1', [id]);
         res.json({ success: true });
     } catch (e) {
+        console.error('Sletning af bruger fejslede:', e);
         res.status(500).json({ error: 'Kunne ikke slette bruger' });
     }
 });
