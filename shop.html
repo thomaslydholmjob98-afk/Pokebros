@@ -1,114 +1,113 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="da">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Shop | The Poke Bros</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .shop-container { max-width: 1100px; margin: 40px auto; padding: 0 20px; }
-        .shop-header { text-align: center; margin-bottom: 30px; }
-        .shop-filters { display: flex; justify-content: center; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; }
-        .filter-btn { background: #e0e0e0; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
-        .filter-btn.active, .filter-btn:hover { background: #e63946; color: white; }
-        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 24px; }
-        .product-card { background: #fff; border: 1px solid #e1e8ed; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; flex-direction: column; transition: transform 0.2s; }
-        .product-card:hover { transform: translateY(-4px); }
-        .product-image { width: 100%; height: 260px; object-fit: contain; background: #f8f9fa; padding: 15px; box-sizing: border-box; }
-        .product-info { padding: 15px; display: flex; flex-direction: column; flex-grow: 1; }
-        .product-badge { align-self: flex-start; background: #ee6c4d; color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; margin-bottom: 8px; text-transform: uppercase; }
-        .product-title { font-size: 16px; font-weight: bold; color: #1a1a1a; margin: 0 0 8px 0; }
-        .product-price { font-size: 18px; font-weight: bold; color: #2b2d42; margin-bottom: 15px; }
-        .buy-btn { background: #2b2d42; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: auto; width: 100%; text-align: center; text-decoration: none; display: block; box-sizing: border-box; }
-        .buy-btn:hover { background: #e63946; }
-        .empty-shop { text-align: center; color: #666; padding: 40px; grid-column: 1 / -1; }
+        .shop-container { max-width: 1100px; margin: 40px auto; padding: 0 20px; color: #fff; }
+        .shop-header { text-align: center; margin-bottom: 40px; }
+        .shop-header h1 { color: #e63946; margin-bottom: 10px; }
+        .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
+        .product-card { background: #111318; border: 1px solid #222; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
+        .product-img { width: 100%; height: 220px; object-fit: cover; background: #1a1e29; }
+        .product-body { padding: 20px; display: flex; flex-direction: column; flex: 1; }
+        .product-category { font-size: 11px; font-weight: bold; color: #e63946; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .product-title { font-size: 16px; font-weight: bold; color: #fff; margin: 0 0 10px 0; }
+        .product-price { font-size: 18px; font-weight: bold; color: #f1faee; margin-bottom: 15px; }
+        .product-footer { margin-top: auto; }
+        .buy-btn { width: 100%; padding: 12px; background: #e63946; color: #fff; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-align: center; }
+        .buy-btn:hover { background: #d90429; }
+        .buy-btn:disabled { background: #444; color: #888; cursor: not-allowed; }
     </style>
 </head>
 <body>
-
     <header>
         <a class="brand" href="index.html">THE POKE BROS</a>
         <nav>
-            <a href="index.html#how">Sådan virker det</a>
-            <a href="index.html#prices">Priser</a>
-            <a href="shop.html" class="active">Shop</a>
-            <a href="selg.html">Sælg din samling</a>
+            <a href="index.html">Forsiden</a>
+            <a href="shop.html" style="color: #e63946;">Shop</a>
             <a href="track.html">Spor ordre</a>
             <a href="account.html" id="accountLink">Min konto</a>
         </nav>
-        <a class="btn small" href="index.html#order">Bestil grading</a>
     </header>
 
     <main class="shop-container">
         <div class="shop-header">
-            <span class="eyebrow">POKE BROS SHOP</span>
-            <h1>Køb graded slabs & samlerkort</h1>
-            <p>Udforsk vores udvalg af verificerede CGC slabs, enkeltkort og samlinger.</p>
+            <h1>The Poke Bros Shop</h1>
+            <p>Køb lækre graderede slabs, sjældne enkeltkort og samletilbehør direkte fra vores lager.</p>
         </div>
 
-        <div class="shop-filters">
-            <button class="filter-btn active" onclick="filterShop('all')">Alle varer</button>
-            <button class="filter-btn" onclick="filterShop('slab')">CGC Slabs</button>
-            <button class="filter-btn" onclick="filterShop('raw')">Enkeltkort (Raw)</button>
-            <button class="filter-btn" onclick="filterShop('sealed')">Sealed / Tilbehør</button>
-        </div>
-
-        <div class="product-grid" id="productGrid">
-            <div class="empty-shop">Henter produkter...</div>
+        <div id="shopGrid" class="shop-grid">
+            <p style="text-align: center; color: #888; grid-column: 1 / -1;">Indlæser produkter...</p>
         </div>
     </main>
 
-    <footer>
-        <b>THE POKE BROS</b>
-        <span>Uafhængig grading-indsendelsesservice & samlerkort • thepokebros.com</span>
-    </footer>
-
     <script>
-    let allProducts = [];
+        let isLoggedIn = false;
 
-    async function loadProducts() {
-        try {
-            const res = await fetch('/api/products');
-            allProducts = await res.json();
-            renderProducts(allProducts);
-        } catch (err) {
-            document.getElementById('productGrid').innerHTML = '<div class="empty-shop">Kunne ikke indlæse produkter.</div>';
+        async function checkAuthAndLoadShop() {
+            try {
+                const authRes = await fetch('/api/auth/me');
+                const authData = await authRes.json();
+                isLoggedIn = authData.loggedIn;
+
+                if (isLoggedIn) {
+                    document.getElementById('accountLink').textContent = 'Min konto';
+                } else {
+                    document.getElementById('accountLink').textContent = 'Log ind';
+                    document.getElementById('accountLink').href = 'login.html';
+                }
+
+                const res = await fetch('/api/products');
+                const products = await res.json();
+                const grid = document.getElementById('shopGrid');
+
+                if (!products || products.length === 0) {
+                    grid.innerHTML = '<p style="text-align: center; color: #888; grid-column: 1 / -1;">Ingen produkter til salg i øjeblikket.</p>';
+                    return;
+                }
+
+                grid.innerHTML = products.map(p => `
+                    <div class="product-card">
+                        <img src="${p.image_url || 'https://via.placeholder.com/300x220?text=The+Poke+Bros'}" alt="${p.title}" class="product-img">
+                        <div class="product-body">
+                            <span class="product-category">${p.category_label || p.category}</span>
+                            <h3 class="product-title">${p.title}</h3>
+                            <div class="product-price">${p.price_dkk.toLocaleString('da-DK')} kr. <span style="font-size: 12px; color: #888; font-weight: normal;">+ 69 kr. fragt</span></div>
+                            <div class="product-footer">
+                                ${isLoggedIn 
+                                    ? `<button class="buy-btn" onclick="buyProduct('${p.id}')">Køb nu</button>` 
+                                    : `<a href="login.html?next=shop" class="buy-btn" style="display:block; text-decoration:none;">Log ind for at købe</a>`
+                                }
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (err) {
+                console.error(err);
+                document.getElementById('shopGrid').innerHTML = '<p style="text-align: center; color: #e63946; grid-column: 1 / -1;">Kunne ikke indhente shoppen.</p>';
+            }
         }
-    }
 
-    function renderProducts(products) {
-        const grid = document.getElementById('productGrid');
-        if (!products || products.length === 0) {
-            grid.innerHTML = '<div class="empty-shop">Der er i øjeblikket ingen varer til salg. Tjek igen snart!</div>';
-            return;
+        async function buyProduct(productId) {
+            try {
+                const res = await fetch('/api/shop-checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ productId })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Fejl ved køb');
+                location.href = data.url;
+            } catch (err) {
+                alert(err.message);
+            }
         }
 
-        grid.innerHTML = products.map(p => `
-            <div class="product-card">
-                <img src="${p.image_url || 'https://via.placeholder.com/300x400?text=Ingen+billede'}" class="product-image" alt="${p.title}">
-                <div class="product-info">
-                    <span class="product-badge">${p.category_label || p.category}</span>
-                    <h3 class="product-title">${p.title}</h3>
-                    <div class="product-price">${p.price_dkk} kr.</div>
-                    <a href="mailto:thomaslydholmjob98@gmail.com?subject=Køb/Forespørgsel: ${encodeURIComponent(p.title)}" class="buy-btn">Kontakt for køb</a>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    function filterShop(category) {
-        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-        event.target.classList.add('active');
-
-        if (category === 'all') {
-            renderProducts(allProducts);
-        } else {
-            const filtered = allProducts.filter(p => p.category === category);
-            renderProducts(filtered);
-        }
-    }
-
-    loadProducts();
+        checkAuthAndLoadShop();
     </script>
 </body>
 </html>
