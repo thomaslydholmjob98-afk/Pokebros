@@ -1,483 +1,400 @@
-<!doctype html>
-<html lang="da">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Admin Dashboard | The Poke Bros</title>
-    <link rel="stylesheet" href="style.css">
-    <style>
-        .admin-container { max-width: 1200px; margin: 40px auto; padding: 0 20px; color: #fff; }
-        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px; }
-        .admin-header h1 { color: #e63946; margin: 0; }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: #111318; border: 1px solid #222; border-radius: 10px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-        .stat-card span { font-size: 13px; color: #888; text-transform: uppercase; display: block; margin-bottom: 5px; }
-        .stat-card h3 { font-size: 24px; color: #fff; margin: 0; }
-        .admin-card { background: #111318; border: 1px solid #222; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .admin-card h2 { color: #e63946; margin-top: 0; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
-        table th, table td { padding: 12px; border-bottom: 1px solid #222; text-align: left; }
-        table th { background: #1a1e29; color: #aaa; }
-        .form-inline { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        .form-inline input, .form-inline select { padding: 8px 12px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; }
-        .login-box { max-width: 400px; margin: 100px auto; background: #111318; padding: 40px; border-radius: 12px; border: 1px solid #222; text-align: center; }
-        .login-box input { width: 100%; padding: 12px; margin: 15px 0; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 6px; box-sizing: border-box; }
-        textarea.gen-output { width: 100%; height: 200px; padding: 15px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 6px; font-family: monospace; font-size: 14px; box-sizing: border-box; resize: vertical; }
-        .success-msg { color: #2ecc71; font-weight: bold; font-size: 14px; margin-top: 10px; display: none; }
-        
-        .upload-field { border: 2px dashed #333; border-radius: 8px; padding: 20px; text-align: center; background: #1a1e29; cursor: pointer; transition: border-color 0.2s; margin-top: 5px; }
-        .upload-field:hover { border-color: #e63946; }
-        .upload-preview { max-height: 150px; border-radius: 6px; margin-top: 10px; display: none; margin-left: auto; margin-right: auto; }
-    </style>
-</head>
-<body>
-    <header>
-        <a class="brand" href="index.html">THE POKE BROS</a>
-        <nav><a href="index.html">Til forsiden</a></nav>
-    </header>
+const express = require('express');
+const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
+const { Pool } = require('pg');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const bcrypt = require('bcrypt');
 
-    <div id="loginScreen" class="login-box">
-        <h2 style="color: #e63946; margin-top: 0;">Admin Login</h2>
-        <p style="color: #aaa; font-size: 14px;">Indtast administrator-adgangskoden for at fortsætte.</p>
-        <input type="password" id="adminPassInput" placeholder="Admin kodeord">
-        <button onclick="loginAdmin()" class="btn" style="width: 100%;">Log ind</button>
-        <p id="loginError" style="color: #ff4d5a; margin-top: 10px; font-size: 13px;"></p>
-    </div>
+const app = express();
+const port = process.env.PORT || 3000;
 
-    <main id="adminContent" class="admin-container" style="display: none;">
-        <div class="admin-header">
-            <h1>Admin Dashboard</h1>
-            <button onclick="logoutAdmin()" class="btn ghost" style="padding: 8px 16px;">Log ud</button>
-        </div>
+const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+});
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <span>Omsætning (Betalt)</span>
-                <h3 id="statRevenue">0 kr.</h3>
-            </div>
-            <div class="stat-card">
-                <span>Antal Ordrer</span>
-                <h3 id="statOrders">0</h3>
-            </div>
-            <div class="stat-card">
-                <span>Kort i Aktiv Pulje</span>
-                <h3 id="statPool">0 stk.</h3>
-            </div>
-            <div class="stat-card">
-                <span>Aktive Medlemmer</span>
-                <h3 id="statMembers">0</h3>
-            </div>
-        </div>
+// Automatisk oprettelse og opdatering af databasetabeller
+async function initDb() {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS pool_status (
+                id INT PRIMARY KEY,
+                count INT NOT NULL DEFAULT 0
+            );
 
-        <div class="admin-card">
-            <h2>Indkomne Salgshenvendelser (Sælg din samling)</h2>
-            <div style="overflow-x: auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Dato</th>
-                            <th>Navn</th>
-                            <th>Kontakt</th>
-                            <th>Beskrivelse af Samling</th>
-                            <th>Forventet Pris</th>
-                        </tr>
-                    </thead>
-                    <tbody id="sellRequestsTableBody">
-                        <tr><td colspan="5" style="text-align: center; color: #888;">Henter salgshenvendelser...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+            CREATE TABLE IF NOT EXISTS products (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                category VARCHAR(100),
+                price_dkk INT NOT NULL,
+                image_url TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
 
-        <div class="admin-card">
-            <h2>Styr Puljetæller manuelt</h2>
-            <p style="color: #aaa; font-size: 14px; margin-bottom: 15px;">Indtast det antal kort, der skal vises i puljen på forsiden:</p>
-            <div class="form-inline">
-                <input type="number" id="manualPoolInput" placeholder="Fx 18" style="width: 150px;">
-                <button onclick="updatePoolStatus()" class="btn" style="padding: 8px 16px;">Opdatér pulje</button>
-            </div>
-        </div>
+            CREATE TABLE IF NOT EXISTS orders (
+                id SERIAL PRIMARY KEY,
+                order_id VARCHAR(50) UNIQUE NOT NULL,
+                customer_name VARCHAR(255),
+                customer_email VARCHAR(255),
+                customer_phone VARCHAR(50),
+                customer_address TEXT,
+                customer_postal VARCHAR(20),
+                customer_city VARCHAR(100),
+                qty INT,
+                tier VARCHAR(50),
+                shipping_method VARCHAR(50),
+                total_dkk INT,
+                payment_status VARCHAR(50) DEFAULT 'pending',
+                status VARCHAR(50) DEFAULT 'modtaget',
+                tracking_number VARCHAR(100),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
 
-        <div class="admin-card">
-            <h2>Opret nyt produkt i Shoppen</h2>
-            <form id="productForm" onsubmit="createProduct(event)" style="display: flex; flex-direction: column; gap: 15px;">
-                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                    <div style="flex: 2; min-width: 200px;">
-                        <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Titel *</label>
-                        <input type="text" id="prodTitle" placeholder="Fx Rapidash Base Set" required style="width: 100%; padding: 10px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; box-sizing: border-box;">
-                    </div>
-                    <div style="flex: 1; min-width: 140px;">
-                        <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Kategori</label>
-                        <input type="text" id="prodCategory" placeholder="Fx Slabs / Pokémon" style="width: 100%; padding: 10px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; box-sizing: border-box;">
-                    </div>
-                    <div style="flex: 1; min-width: 100px;">
-                        <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Pris (DKK) *</label>
-                        <input type="number" id="prodPrice" placeholder="1500" required style="width: 100%; padding: 10px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; box-sizing: border-box;">
-                    </div>
-                </div>
+            CREATE TABLE IF NOT EXISTS sell_requests (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255),
+                email VARCHAR(255),
+                phone VARCHAR(50),
+                details TEXT,
+                expected_price VARCHAR(100),
+                status VARCHAR(50) DEFAULT 'modtaget',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
 
-                <div>
-                    <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Billede (Upload direkte fra Mobil eller PC)</label>
-                    <input type="file" id="prodImageFile" accept="image/*" onchange="handleProductImageSelect(event)" style="display: none;">
-                    <div class="upload-field" onclick="document.getElementById('prodImageFile').click()">
-                        <p id="uploadPrompt" style="margin:0; color:#ccc; font-size:14px; font-weight:bold;">📸 Klik her for at vælge et billede fra din mobil/PC eller tage et med kameraet</p>
-                        <img id="prodImagePreview" class="upload-preview" alt="Produkt preview">
-                    </div>
-                </div>
+        // Sørg for at image_url kolonnen i products er datatypen TEXT (hvis den tidligere var VARCHAR)
+        await pool.query(`
+            ALTER TABLE products ALTER COLUMN image_url TYPE TEXT;
+        `).catch(() => {});
 
-                <button type="submit" id="createProductBtn" class="btn" style="padding: 12px 24px; align-self: flex-start; margin-top: 5px;">Opret produkt</button>
-            </form>
-        </div>
+        await pool.query(`
+            INSERT INTO pool_status (id, count) VALUES (1, 12)
+            ON CONFLICT (id) DO NOTHING;
+        `);
+        console.log('Database tabeller er initialiseret korrekt.');
+    } catch (err) {
+        console.error('DB Init Fejl:', err.message);
+    }
+}
+initDb();
 
-        <div class="admin-card">
-            <h2>Ordrer</h2>
-            <div style="overflow-x: auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Ordre ID</th>
-                            <th>Kunde</th>
-                            <th>Tier / Antal</th>
-                            <th>Total</th>
-                            <th>Betaling</th>
-                            <th>Status & Handling</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ordersTableBody">
-                        <tr><td colspan="6" style="text-align: center; color: #888;">Indlæser ordrer...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+// Hæv grænsen for indkommende JSON og URL-encoded data til 50MB
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-        <div class="admin-card">
-            <h2>Sociale Medier Opslag Generator</h2>
-            <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
-                <div style="flex: 1; min-width: 220px;">
-                    <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Antal kort i puljen</label>
-                    <input type="number" id="genPoolCount" value="12" oninput="generatePost()" style="width: 100%; padding: 10px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px;">
-                </div>
-                <div style="flex: 2; min-width: 280px;">
-                    <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Ekstra bemærkning / tilbud</label>
-                    <input type="text" id="genNote" value="Husk koden MASTER2026 for 10% rabat på din første ordre!" oninput="generatePost()" style="width: 100%; padding: 10px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px;">
-                </div>
-            </div>
-            <div style="margin-bottom: 15px;">
-                <textarea id="genOutput" class="gen-output" readonly></textarea>
-            </div>
-            <button onclick="copyToClipboard()" class="btn">Kopiér opslag til udklipsholder</button>
-            <p id="copySuccess" class="success-msg">Opslaget er kopieret!</p>
-        </div>
-    </main>
+app.use(session({
+    store: new pgSession({ pool: pool, tableName: 'session' }),
+    secret: process.env.SESSION_SECRET || 'tpb_secret_key_2026',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { maxAge: 30 * 24 * 60 * 60 * 1000 }
+}));
 
-    <script>
-        let adminPass = localStorage.getItem('tpb_admin_pass') || '';
-        let productBase64Image = '';
+app.use(express.static(__dirname));
 
-        if (adminPass) {
-            verifyAndLoadDashboard();
+// Sikkerhedstjek for admin adgangskode ('Lydholm9320')
+function checkAdmin(req, res, next) {
+    const adminPass = (req.headers['x-admin-password'] || '').trim();
+    if (adminPass !== 'Lydholm9320') {
+        return res.status(401).json({ error: 'Ugyldig adgangskode' });
+    }
+    next();
+}
+
+// Admin Login
+app.post('/api/admin/login', (req, res) => {
+    const { password } = req.body || {};
+    if ((password || '').trim() === 'Lydholm9320') {
+        return res.json({ success: true });
+    }
+    return res.status(401).json({ error: 'Forkert adgangskode' });
+});
+
+// AFSENDELSE AF MAIL VIA BREVO REST API
+async function sendBrevoEmail({ name, email, phone, details, expectedPrice }) {
+    const brevoApiKey = process.env.BREVO_API_KEY;
+    if (!brevoApiKey) {
+        console.log('BREVO_API_KEY mangler i miljøvariabler. Mail blev ikke afsendt.');
+        return;
+    }
+
+    const recipientEmail = 'thomaslydholmjob98@gmail.com';
+
+    try {
+        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: {
+                'accept': 'application/json',
+                'api-key': brevoApiKey,
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+                sender: { name: 'The Poke Bros Platform', email: recipientEmail },
+                to: [{ email: recipientEmail, name: 'Thomas Lydholm' }],
+                subject: `🔥 Ny Salgshenvendelse fra ${name || 'Kunde'}`,
+                htmlContent: `
+                    <h2>Ny henvendelse: Sælg din samling</h2>
+                    <p><b>Navn:</b> ${name || '-'}</p>
+                    <p><b>E-mail:</b> <a href="mailto:${email}">${email || '-'}</a></p>
+                    <p><b>Telefon:</b> ${phone || '-'}</p>
+                    <p><b>Forventet pris:</b> ${expectedPrice || '-'}</p>
+                    <hr>
+                    <h3>Beskrivelse af samlingen:</h3>
+                    <p style="white-space: pre-wrap; background: #f4f4f4; padding: 15px; border-radius: 5px;">${details || '-'}</p>
+                `
+            })
+        });
+
+        if (!response.ok) {
+            const errBody = await response.text();
+            console.error('Brevo API Fejl:', errBody);
+        } else {
+            console.log('E-mail sendt succesfuldt via Brevo API!');
+        }
+    } catch (err) {
+        console.error('Kunne ikke sende e-mail via Brevo:', err.message);
+    }
+}
+
+// SÆLG DIN SAMLING ENDPOINTS
+const handleSellRequest = async (req, res) => {
+    try {
+        const { name, email, phone, details, description, expectedPrice, price } = req.body || {};
+        const textDetails = details || description || '';
+        const priceValue = expectedPrice || price || '';
+
+        await pool.query(
+            'INSERT INTO sell_requests (name, email, phone, details, expected_price) VALUES ($1, $2, $3, $4, $5)',
+            [name || '', email || '', phone || '', textDetails, priceValue]
+        );
+
+        sendBrevoEmail({ name, email, phone, details: textDetails, expectedPrice: priceValue });
+
+        res.json({ success: true, message: 'Mange tak! Din henvendelse er modtaget. Vi vender tilbage inden for 24 timer.' });
+    } catch (err) {
+        console.error('Fejl ved oprettelse af salgshenvendelse:', err);
+        res.json({ success: true, message: 'Din henvendelse er modtaget!' });
+    }
+};
+
+app.post('/api/sell', handleSellRequest);
+app.post('/api/sell-collection', handleSellRequest);
+app.post('/api/contact/sell', handleSellRequest);
+
+// HENT SALGSHENVENDELSER TIL ADMIN
+app.get('/api/admin/sell-requests', checkAdmin, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM sell_requests ORDER BY created_at DESC');
+        res.json({ requests: result.rows });
+    } catch (e) {
+        res.status(500).json({ error: 'Kunne ikke hente salgshenvendelser' });
+    }
+});
+
+// AI KORT-VURDERING (PRE-GRADE)
+app.post('/api/ai-grade', async (req, res) => {
+    try {
+        const { imageBase64, cardName } = req.body || {};
+        if (!imageBase64) return res.status(400).json({ error: 'Intet billede modtaget.' });
+
+        const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+        if (!apiKey) return res.status(503).json({ error: 'AI-vurdering er ikke konfigureret på serveren endnu (GEMINI_API_KEY mangler på Render).' });
+
+        const mimeMatch = imageBase64.match(/^data:(image\/\w+);base64,/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+        const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [
+                        { text: `Du er en professionel CGC / PSA kort-grader for samlekort (Pokémon / One Piece). Analyser dette kort (${cardName || 'Ukendt kort'}) ud fra de fire underområder: Centering, Corners (hjørner), Edges (kanter) og Surface (overflade). Giv en estimeret CGC-karakter samt en konstruktiv, ærlig begrundelse på dansk i et skarpt format med overskrifter. Husk at nævne klart, at vurderingen udelukkende er vejledende.` },
+                        { inline_data: { mime_type: mimeType, data: base64Data } }
+                    ]
+                }]
+            })
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            const msg = errData?.error?.message || JSON.stringify(errData);
+            throw new Error(`Gemini API fejl: ${msg}`);
         }
 
-        async function loginAdmin() {
-            const pass = document.getElementById('adminPassInput').value.trim();
-            adminPass = pass;
-            await verifyAndLoadDashboard();
-        }
+        const data = await response.json();
+        const evaluation = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Kunne ikke generere vurdering.';
 
-        async function verifyAndLoadDashboard() {
-            const errorEl = document.getElementById('loginError');
-            errorEl.textContent = '';
+        res.json({ success: true, evaluation });
+    } catch (err) {
+        console.error('AI Grade Fejl:', err);
+        res.status(500).json({ error: err.message || 'Kunne ikke gennemføre AI-vurdering.' });
+    }
+});
 
-            try {
-                const loginRes = await fetch('/api/admin/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: adminPass })
-                });
+// PULJE STATUS API
+app.get('/api/pool-status', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT count FROM pool_status WHERE id = 1');
+        const count = result.rows[0] ? result.rows[0].count : 12;
+        res.json({ count });
+    } catch (e) {
+        res.json({ count: 12 });
+    }
+});
 
-                if (loginRes.status === 401) {
-                    throw new Error('Forkert adgangskode');
-                }
-                if (!loginRes.ok) {
-                    throw new Error('Serverfejl. Prøv igen.');
-                }
+app.post('/api/admin/pool-status', checkAdmin, async (req, res) => {
+    const { count } = req.body;
+    const numCount = parseInt(count, 10);
+    if (isNaN(numCount)) {
+        return res.status(400).json({ error: 'Ugyldigt antal' });
+    }
+    try {
+        await pool.query(
+            'INSERT INTO pool_status (id, count) VALUES (1, $1) ON CONFLICT (id) DO UPDATE SET count = $1',
+            [numCount]
+        );
+        res.json({ success: true, count: numCount });
+    } catch (e) {
+        res.status(500).json({ error: 'Kunne ikke opdatere pulje i databasen' });
+    }
+});
 
-                localStorage.setItem('tpb_admin_pass', adminPass);
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('adminContent').style.display = 'block';
+// ADMIN DASHBOARD DATA
+app.get('/api/admin/orders', checkAdmin, async (req, res) => {
+    try {
+        let orders = { rows: [], rowCount: 0 };
+        let poolCards = 12;
+        let members = 0;
+        let paidRevenueDkk = 0;
 
-                loadDashboardData();
-                loadSellRequests();
-            } catch (err) {
-                errorEl.textContent = err.message;
-                if (err.message === 'Forkert adgangskode') {
-                    localStorage.removeItem('tpb_admin_pass');
-                }
+        try {
+            const ordersRes = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
+            orders = ordersRes;
+        } catch (e) {}
+
+        try {
+            const poolRes = await pool.query('SELECT count FROM pool_status WHERE id = 1');
+            if (poolRes.rows[0]) poolCards = poolRes.rows[0].count;
+        } catch (e) {}
+
+        try {
+            const membersRes = await pool.query('SELECT COUNT(*) FROM users WHERE membership_active = true');
+            if (membersRes.rows[0]) members = parseInt(membersRes.rows[0].count, 10);
+        } catch (e) {}
+
+        try {
+            const revenueRes = await pool.query("SELECT SUM(total_dkk) FROM orders WHERE payment_status = 'paid'");
+            if (revenueRes.rows[0]?.sum) paidRevenueDkk = revenueRes.rows[0].sum;
+        } catch (e) {}
+
+        res.json({
+            orders: orders.rows,
+            stats: {
+                poolCards,
+                members,
+                paidRevenueDkk,
+                orders: orders.rowCount
+            },
+            statuses: {
+                'modtaget': 'Ordre Modtaget',
+                'under_behandling': 'Under Behandling',
+                'sendt_cgc': 'Sendt til CGC',
+                'hos_cgc': 'Hos CGC (Gradering)',
+                'retur': 'Pakket & Retur til Kunde'
             }
+        });
+    } catch (e) {
+        res.status(500).json({ error: 'Databasefejl' });
+    }
+});
+
+app.patch('/api/admin/orders/:id', checkAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { status, trackingNumber } = req.body;
+    try {
+        if (status) await pool.query('UPDATE orders SET status = $1 WHERE order_id = $2', [status, id]);
+        if (trackingNumber !== undefined) await pool.query('UPDATE orders SET tracking_number = $1 WHERE order_id = $2', [trackingNumber, id]);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: 'Kunne ikke opdatere ordre' });
+    }
+});
+
+// PRODUKT VISNING & OPRETTELSE
+app.get('/api/products', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM products ORDER BY created_at DESC');
+        res.json({ products: result.rows });
+    } catch (e) {
+        res.json({ products: [] });
+    }
+});
+
+app.post('/api/admin/products', checkAdmin, async (req, res) => {
+    const { title, category, priceDkk, imageUrl } = req.body || {};
+    if (!title || !priceDkk) {
+        return res.status(400).json({ error: 'Titel og pris er påkrævet' });
+    }
+    try {
+        const numericPrice = parseInt(priceDkk, 10);
+        await pool.query(
+            'INSERT INTO products (title, category, price_dkk, image_url) VALUES ($1, $2, $3, $4)',
+            [title, category || 'Diverse', numericPrice, imageUrl || '']
+        );
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Produkt oprettelsesfejl:', e);
+        res.status(500).json({ error: 'Kunne ikke oprette produkt i databasen: ' + e.message });
+    }
+});
+
+// CHECKOUT
+app.post('/api/checkout', async (req, res) => {
+    try {
+        const { name, email, phone, address, postal, city, qty, tier, shippingMethod, notes, coupon } = req.body;
+        const basePrices = { bulk: 279, economy: 299, standard: 499, express: 899, walkthrough: 2199, unlimited: 2199 };
+        let pricePerCard = basePrices[tier] || 279;
+
+        let subtotal = qty * pricePerCard;
+        let shipPrice = shippingMethod === 'hjemmelevering' ? 69 : 49;
+        let totalDkk = subtotal + shipPrice;
+
+        if (coupon && coupon.trim().toUpperCase() === 'MASTER2026') {
+            totalDkk -= Math.round(totalDkk * 0.10);
         }
 
-        function logoutAdmin() {
-            localStorage.removeItem('tpb_admin_pass');
-            location.reload();
-        }
+        const orderId = 'TPB-' + Math.floor(100000 + Math.random() * 900000);
 
-        // Automatisk billedkomprimering via Canvas (max 800px, JPEG 75% kvalitet)
-        function handleProductImageSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+        const sessionStripe = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [{
+                price_data: {
+                    currency: 'dkk',
+                    product_data: { name: `CGC Grading (${tier.toUpperCase()}) - ${qty} stk.` },
+                    unit_amount: Math.round((totalDkk / qty) * 100),
+                },
+                quantity: qty,
+            }],
+            mode: 'payment',
+            success_url: `${req.protocol}://${req.get('host')}/success.html?order=${orderId}`,
+            cancel_url: `${req.protocol}://${req.get('host')}/index.html#order`,
+        });
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
-                    const maxDim = 800;
+        await pool.query(
+            `INSERT INTO orders (order_id, customer_name, customer_email, customer_phone, customer_address, customer_postal, customer_city, qty, tier, shipping_method, total_dkk, payment_status, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', 'modtaget')`,
+            [orderId, name, email, phone, address, postal, city, qty, tier, shippingMethod, totalDkk]
+        );
 
-                    if (width > height) {
-                        if (width > maxDim) {
-                            height *= maxDim / width;
-                            width = maxDim;
-                        }
-                    } else {
-                        if (height > maxDim) {
-                            width *= maxDim / height;
-                            height = maxDim;
-                        }
-                    }
+        res.json({ url: sessionStripe.url });
+    } catch (err) {
+        console.error('Checkout fejl:', err);
+        res.status(500).json({ error: 'Kunne ikke oprette betaling.' });
+    }
+});
 
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-
-                    productBase64Image = canvas.toDataURL('image/jpeg', 0.75);
-
-                    const preview = document.getElementById('prodImagePreview');
-                    const promptText = document.getElementById('uploadPrompt');
-                    preview.src = productBase64Image;
-                    preview.style.display = 'block';
-                    promptText.textContent = '✅ Billedet er valgt og optimeret! (Klik for at skifte)';
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        async function createProduct(e) {
-            e.preventDefault();
-            const title = document.getElementById('prodTitle').value.trim();
-            const category = document.getElementById('prodCategory').value.trim();
-            const priceDkk = document.getElementById('prodPrice').value.trim();
-
-            if (!title || !priceDkk) {
-                alert('Indtast venligst både titel og pris.');
-                return;
-            }
-
-            const btn = document.getElementById('createProductBtn');
-            btn.disabled = true;
-            btn.textContent = 'Opretter produkt...';
-
-            try {
-                const res = await fetch('/api/admin/products', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json', 
-                        'x-admin-password': adminPass 
-                    },
-                    body: JSON.stringify({
-                        title,
-                        category: category || 'Diverse',
-                        priceDkk: Number(priceDkk),
-                        imageUrl: productBase64Image
-                    })
-                });
-                
-                const resData = await res.json();
-                if (!res.ok) {
-                    throw new Error(resData.error || 'Fejl ved oprettelse af produkt');
-                }
-                
-                alert('Produkt oprettet succesfuldt!');
-                
-                document.getElementById('productForm').reset();
-                document.getElementById('prodImagePreview').style.display = 'none';
-                document.getElementById('uploadPrompt').textContent = '📸 Klik her for at vælge et billede fra din mobil/PC eller tage et med kameraet';
-                productBase64Image = '';
-            } catch (e) { 
-                alert('Kunne ikke oprette produkt: ' + e.message); 
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Opret produkt';
-            }
-        }
-
-        async function loadSellRequests() {
-            const tbody = document.getElementById('sellRequestsTableBody');
-            try {
-                const res = await fetch('/api/admin/sell-requests', { headers: { 'x-admin-password': adminPass } });
-                if (!res.ok) return;
-                const data = await res.json();
-                
-                if (!data.requests || data.requests.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888;">Ingen henvendelser endnu.</td></tr>';
-                    return;
-                }
-
-                tbody.innerHTML = data.requests.map(r => `
-                    <tr>
-                        <td style="white-space:nowrap; color:#888;">${new Date(r.created_at).toLocaleDateString('da-DK')}</td>
-                        <td><b>${r.name}</b></td>
-                        <td>
-                            <a href="mailto:${r.email}" style="color:#e63946;">${r.email}</a><br>
-                            <small style="color:#aaa;">Tlf: ${r.phone || '-'}</small>
-                        </td>
-                        <td style="max-width:300px; font-size:13px; color:#ccc;">${r.details || '-'}</td>
-                        <td><b>${r.expected_price || '-'}</b></td>
-                    </tr>
-                `).join('');
-            } catch (e) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ff4d5a;">Fejl ved hentning.</td></tr>';
-            }
-        }
-
-        async function loadDashboardData() {
-            try {
-                const res = await fetch('/api/admin/orders', { headers: { 'x-admin-password': adminPass } });
-                if (!res.ok) return;
-                const data = await res.json();
-                
-                document.getElementById('statRevenue').textContent = (data.stats.paidRevenueDkk || 0).toLocaleString('da-DK') + ' kr.';
-                document.getElementById('statOrders').textContent = data.stats.orders || 0;
-                document.getElementById('statPool').textContent = (data.stats.poolCards || 0) + ' stk.';
-                document.getElementById('statMembers').textContent = data.stats.members || 0;
-
-                document.getElementById('manualPoolInput').value = data.stats.poolCards || 0;
-                document.getElementById('genPoolCount').value = data.stats.poolCards || 0;
-                generatePost();
-
-                const tbody = document.getElementById('ordersTableBody');
-                if (!data.orders || data.orders.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #888;">Ingen ordrer fundet.</td></tr>';
-                    return;
-                }
-
-                tbody.innerHTML = data.orders.map(o => `
-                    <tr>
-                        <td>
-                            <b>${o.order_id}</b><br>
-                            <span style="font-size: 11px; color: #888;">${new Date(o.created_at).toLocaleDateString('da-DK')}</span><br>
-                            <a href="packingslip.html?order=${o.order_id}" target="_blank" style="font-size: 11px; color: #e63946; text-decoration: underline;">📄 Pakkeseddel</a>
-                        </td>
-                        <td>
-                            <b>${o.customer_name}</b><br>
-                            <span style="font-size: 12px; color: #aaa;">${o.customer_email}</span><br>
-                            <span style="font-size: 11px; color: #666;">${o.customer_address}, ${o.customer_postal} ${o.customer_city}</span>
-                        </td>
-                        <td>${o.tier.toUpperCase()} (${o.qty} stk.)</td>
-                        <td><b>${o.total_dkk} kr.</b></td>
-                        <td><span style="color: ${o.payment_status === 'paid' ? '#2ecc71' : '#f39c12'};">${o.payment_status}</span></td>
-                        <td>
-                            <div style="display: flex; flex-direction: column; gap: 6px;">
-                                <select onchange="updateOrderStatus('${o.order_id}', this.value)" style="background: #1a1e29; color: #fff; border: 1px solid #333; padding: 6px; border-radius: 4px;">
-                                    ${Object.entries(data.statuses || {}).map(([key, label]) => `<option value="${key}" ${o.status === key ? 'selected' : ''}>${label}</option>`).join('')}
-                                </select>
-                                <input type="text" placeholder="Trackingnummer" value="${o.tracking_number || ''}" onchange="updateTracking('${o.order_id}', this.value)" style="background: #1a1e29; color: #fff; border: 1px solid #333; padding: 4px 6px; border-radius: 4px; font-size: 12px;">
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
-            } catch (e) {
-                console.error('Fejl ved indlæsning af dashboard data:', e);
-            }
-        }
-
-        async function updatePoolStatus() {
-            const countInput = document.getElementById('manualPoolInput');
-            const count = countInput.value;
-            if (count === '') {
-                alert('Indtast venligst et antal kort.');
-                return;
-            }
-            try {
-                const res = await fetch('/api/admin/pool-status', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json', 
-                        'x-admin-password': adminPass 
-                    },
-                    body: JSON.stringify({ count: Number(count) })
-                });
-                
-                const resData = await res.json();
-                if (!res.ok) {
-                    throw new Error(resData.error || 'Fejl ved opdatering af pulje');
-                }
-                
-                alert('Puljetæller opdateret til ' + count + ' kort!');
-                loadDashboardData();
-            } catch (e) { 
-                alert('Kunne ikke opdatere pulje: ' + e.message); 
-            }
-        }
-
-        async function updateOrderStatus(orderId, newStatus) {
-            try {
-                const res = await fetch(`/api/admin/orders/${orderId}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPass },
-                    body: JSON.stringify({ status: newStatus })
-                });
-                if (!res.ok) throw new Error('Fejl');
-                loadDashboardData();
-            } catch (e) { alert('Kunne ikke opdatere status'); }
-        }
-
-        async function updateTracking(orderId, trackingNumber) {
-            try {
-                const res = await fetch(`/api/admin/orders/${orderId}`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPass },
-                    body: JSON.stringify({ trackingNumber })
-                });
-                if (!res.ok) throw new Error('Fejl');
-                alert('Trackingnummer gemt!');
-            } catch (e) { alert('Kunne ikke gemme tracking'); }
-        }
-
-        function generatePost() {
-            const count = document.getElementById('genPoolCount').value || 0;
-            const note = document.getElementById('genNote').value;
-            const text = `🔥 CGC GRADING MED THE POKE BROS 🔥
-
-Vil du have dine Pokémon- eller One Piece-kort graded hos CGC uden at skulle samle en stor submission selv? Hos The Poke Bros kan du sende fra bare 1 kort!
-
-📦 Nuværende puljestatus: ${count} / 25 kort samlet! Vi sender afsted, så snart puljen er fyldt.
-
-Priser pr. kort (inkl. CGC-gebyr, valuta & forsikret håndtering):
-• Bulk: 279 kr. (Maks. $500 værd)
-• Economy: 299 kr. (Maks. $1.000 værd)
-• Standard: 499 kr. (Maks. $3.000 værd)
-
-💡 ${note}
-
-Læs mere, se priser og bestil direkte på vores sikre platform:
-👉 https://www.thepokebros.com
-
-Pak altid dine kort sikkert i sleeve og toploader! 🚀`;
-            document.getElementById('genOutput').value = text;
-        }
-
-        function copyToClipboard() {
-            const textarea = document.getElementById('genOutput');
-            textarea.select();
-            navigator.clipboard.writeText(textarea.value);
-            const msg = document.getElementById('copySuccess');
-            msg.style.display = 'block';
-            setTimeout(() => { msg.style.display = 'none'; }, 3000);
-        }
-    </script>
-</body>
-</html>
+app.listen(port, () => {
+    console.log(`Server kører på port ${port}`);
+});
