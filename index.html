@@ -1,18 +1,29 @@
 <!doctype html><html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Poke Bros | CGC Grading Service</title><meta name="description" content="Send dine samlekort til The Poke Bros og få dem indsendt til CGC grading uden selv at skulle samle en stor submission."><link rel="stylesheet" href="style.css">
 <style>
-    /* Svævende Pokéball */
-    #pokeEasterEgg {
+    /* Svævende Master Ball & Genert flugt-effekt */
+    @keyframes floatMasterBall {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-15px); }
+    }
+    #easterEggContainer {
         position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px;
-        background: linear-gradient(to bottom, #ff2a2a 0%, #ff2a2a 50%, #f0f0f0 50%, #f0f0f0 100%);
+        z-index: 9999; 
+        animation: floatMasterBall 3.5s ease-in-out infinite;
+        padding: 30px; /* Dette skaber et usynligt felt (en "aura") omkring bolden, så den reagerer, når musen er tæt på */
+        margin: -30px; /* Modvirker padding for at holde den præcise placering */
+    }
+    #pokeEasterEgg {
+        width: 100%; height: 100%; position: relative;
+        background: linear-gradient(to bottom, #7b2cbf 0%, #7b2cbf 50%, #f0f0f0 50%, #f0f0f0 100%);
         border-radius: 50%; border: 3px solid #1a1a1a; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-        cursor: pointer; z-index: 9999; display: flex; align-items: center; justify-content: center; transition: transform 0.3s ease;
+        cursor: pointer; display: flex; align-items: center; justify-content: center;
+        transition: transform 0.4s ease-out; /* Sikrer at den flygter "blødt" og roligt */
     }
     #pokeEasterEgg::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; box-shadow: inset 0 6px 12px rgba(255,255,255,0.4); pointer-events: none; }
     .poke-belt { position: absolute; top: 50%; left: 0; width: 100%; height: 8px; background: #1a1a1a; transform: translateY(-50%); }
-    .poke-button { position: absolute; top: 50%; left: 50%; width: 18px; height: 18px; background: #fff; border: 3px solid #1a1a1a; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: inset 0 0 0 2px #ddd; z-index: 2; }
-    #pokeEasterEgg:hover { transform: scale(1.15) rotate(15deg); }
+    .poke-button { position: absolute; top: 50%; left: 50%; width: 18px; height: 18px; background: #fff; border: 3px solid #1a1a1a; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: inset 0 0 0 2px #ddd; z-index: 2; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #7b2cbf; }
 
-    /* Master Ball regnvejr */
+    /* Master Ball regnvejr efter klik */
     @keyframes fall { 0% { transform: translateY(-60px) rotate(0deg); opacity: 1; } 100% { transform: translateY(105vh) rotate(360deg); opacity: 0; } }
     .falling-masterball {
         position: fixed; top: -60px; width: 40px; height: 40px;
@@ -90,13 +101,15 @@
 
 <footer><b>THE POKE BROS</b><span>Uafhængig grading-indsendelsesservice • thepokebros.com</span><small>Pokémon og CGC er varemærker tilhørende deres respektive ejere. The Poke Bros er ikke tilknyttet eller sponsoreret af Pokémon Company.</small></footer>
 
-<!-- Svævende Pokéball -->
-<div id="pokeEasterEgg" onclick="triggerMasterBallRain()" title="Klik for en overraskelse!">
-    <div class="poke-belt"></div>
-    <div class="poke-button"></div>
+<!-- Svævende & Genert Master Ball -->
+<div id="easterEggContainer">
+    <div id="pokeEasterEgg" onclick="triggerMasterBallRain()" title="Klik for en overraskelse!">
+        <div class="poke-belt"></div>
+        <div class="poke-button">M</div>
+    </div>
 </div>
 
-<!-- Besked-boks -->
+<!-- Besked-boks til rabatkode -->
 <div id="masterBallModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #111318; color: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 10000; text-align: center; max-width: 400px; width: 90%; border: 3px solid #7b2cbf;">
     <h2 style="color: #9d4edd; margin-top: 0;">⚡ MASTER BALL AKTIVERET! ⚡</h2>
     <p style="font-size: 15px;">Du fandt det nørdede påskeæg! Brug koden <strong>MASTER2026</strong> på din første ordre for at få 10% rabat (kræver login).</p>
@@ -105,6 +118,29 @@
 </div>
 
 <script>
+// "Genert" Master Ball - Skubber bolden stille væk, når musen kommer i nærheden
+const eggContainer = document.getElementById('easterEggContainer');
+const egg = document.getElementById('pokeEasterEgg');
+
+eggContainer.addEventListener('mousemove', (e) => {
+    const rect = eggContainer.getBoundingClientRect();
+    const x = e.clientX - rect.left - (rect.width / 2);
+    const y = e.clientY - rect.top - (rect.height / 2);
+    
+    // Beregner et blødt skub i modsat retning af musen (maks 15 pixels)
+    const moveX = (x < 0 ? 15 : -15);
+    const moveY = (y < 0 ? 15 : -15);
+    
+    egg.style.transform = `translate(${moveX}px, ${moveY}px) scale(1.05) rotate(${-moveX}deg)`;
+});
+
+eggContainer.addEventListener('mouseleave', () => {
+    // Falder roligt på plads igen
+    egg.style.transform = `translate(0, 0) scale(1) rotate(0deg)`;
+});
+
+
+// Nedenunder ligger al den originale kode til systemet
 async function loadPoolStatus() {
     try {
         const res = await fetch('/api/pool-status');
@@ -154,9 +190,9 @@ async function homeTrackOrder() {
 }
 
 function triggerMasterBallRain() {
-    const egg = document.getElementById('pokeEasterEgg');
-    egg.style.transform = 'scale(0.8)';
-    setTimeout(() => egg.style.transform = 'scale(1)', 200);
+    const eggElem = document.getElementById('pokeEasterEgg');
+    eggElem.style.transform = 'scale(0.8)';
+    setTimeout(() => eggElem.style.transform = 'scale(1)', 200);
 
     for (let i = 0; i < 35; i++) {
         const ball = document.createElement('div');
