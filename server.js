@@ -1,6 +1,6 @@
 const express = require('express');
 const session = require('express-session');
-const pgSession = require('connect-pg-simple')(express);
+const pgSession = require('connect-pg-simple')(session);
 const { Pool } = require('pg');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const bcrypt = require('bcrypt');
