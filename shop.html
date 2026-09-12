@@ -13,7 +13,7 @@
         .shop-header p { color: #aaa; font-size: 1.1rem; }
         
         .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 25px; margin-top: 30px; }
-        .product-card { background: #111318; border: 1px solid #222; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, border-color 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .product-card { background: #111318; border: 1px solid #222; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; transition: transform 0.2s, border-color 0.2s; box-shadow: 0 5px 15px rgba(0,0,0,0.3); position: relative; }
         .product-card:hover { transform: translateY(-5px); border-color: #e63946; }
         .product-img { width: 100%; height: 220px; object-fit: cover; background: #1a1e29; display: block; }
         .product-info { padding: 20px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
@@ -21,6 +21,15 @@
         .product-title { font-size: 18px; color: #fff; margin: 0 0 10px 0; font-weight: bold; }
         .product-price { font-size: 22px; color: #fff; font-weight: bold; margin-bottom: 15px; }
         .product-price span { font-size: 14px; color: #888; font-weight: normal; }
+
+        /* Solgt-elementer til produkter */
+        .sold-badge {
+            position: absolute; top: 15px; right: 15px;
+            background: #e63946; color: #fff; padding: 6px 14px;
+            font-weight: bold; font-size: 14px; border-radius: 4px;
+            letter-spacing: 1px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); z-index: 10;
+        }
+        .sold-overlay img { opacity: 0.5; filter: grayscale(40%); }
     </style>
 </head>
 <body>
@@ -44,7 +53,7 @@
         </div>
 
         <div class="product-grid" id="productGrid">
-            <!-- Medlemskab Årligt (KORREKT PRIS: 599 kr.) -->
+            <!-- Medlemskab Årligt -->
             <div class="product-card">
                 <div style="background: linear-gradient(135deg, #1f1a2e 0%, #111318 100%); height: 220px; display: flex; align-items: center; justify-content: center; color: #e63946; font-size: 48px;">
                     ⭐
@@ -93,9 +102,11 @@
                 const grid = document.getElementById('productGrid');
                 
                 data.products.forEach(p => {
+                    const isSold = p.status === 'solgt';
                     const card = document.createElement('div');
-                    card.className = 'product-card';
+                    card.className = `product-card ${isSold ? 'sold-overlay' : ''}`;
                     card.innerHTML = `
+                        ${isSold ? '<div class="sold-badge">SOLGT</div>' : ''}
                         <img src="${p.image_url || 'https://via.placeholder.com/400x300?text=The+Poke+Bros'}" class="product-img" alt="${p.title}">
                         <div class="product-info">
                             <div>
@@ -104,7 +115,10 @@
                             </div>
                             <div>
                                 <div class="product-price">${p.price_dkk.toLocaleString('da-DK')} kr.</div>
-                                <button onclick="alert('Kontakt Thomas på thomaslydholmjob98@gmail.com for køb af dette produkt.')" class="btn" style="width: 100%; box-sizing: border-box;">Køb produkt</button>
+                                ${isSold 
+                                    ? '<button class="btn ghost" style="width: 100%; box-sizing: border-box; opacity: 0.5; cursor: not-allowed;" disabled>Udsolgt</button>' 
+                                    : `<button onclick="alert('Kontakt Thomas på thomaslydholmjob98@gmail.com for køb af dette produkt.')" class="btn" style="width: 100%; box-sizing: border-box;">Køb produkt</button>`
+                                }
                             </div>
                         </div>
                     `;
