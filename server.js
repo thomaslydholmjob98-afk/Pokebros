@@ -38,7 +38,11 @@ db.query(`
         id VARCHAR(64) PRIMARY KEY, title VARCHAR(255) NOT NULL, category VARCHAR(64) NOT NULL,
         category_label VARCHAR(64), price_dkk INT NOT NULL, image_url TEXT, sold BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT NOW()
     );
-`).catch(err => console.error('Kunne ikke oprette products tabel:', err));
+    CREATE TABLE IF NOT EXISTS site_settings (
+        key VARCHAR(64) PRIMARY KEY,
+        value TEXT
+    );
+`).catch(err => console.error('Kunne ikke oprette tabeller:', err));
 
 const TIERS={bulk:{name:'CGC Bulk grading',price:279},economy:{name:'CGC Economy grading',price:299},standard:{name:'CGC Standard grading',price:499},express:{name:'CGC Express grading',price:899},walkthrough:{name:'CGC WalkThrough grading',price:2199},unlimited:{name:'CGC Unlimited Value grading',price:2199}};
 const RETURN_SHIPPING_DKK=69;
@@ -62,14 +66,30 @@ app.post('/api/stripe-webhook',express.raw({type:'application/json'}),async(req,
 app.use(express.json({limit:'100kb'})); app.use(express.static(__dirname,{extensions:['html']}));
 const authLimiter=rateLimit({windowMs:15*60*1000,limit:30});
 
-// Offentlig endpoint til at hente puljestatus til forsiden
+// Hent puljestatus (tjekker om der er sat en manuel overstyring i site_settings, ellers tæller den fra ordrer)
 app.get('/api/pool-status', async (req, res) => {
     try {
+        const manual = await db.query("SELECT value FROM site_settings WHERE key='manual_pool_count'");
+        if (manual.rows[0] && manual.rows[0].value !== null && manual.rows[0].value !== '') {
+            return res.json({ count: Number(manual.rows[0].value) });
+        }
         const r = await db.query("SELECT SUM(qty) as total FROM orders WHERE status IN ('cards_received', 'awaiting_batch')");
         const count = Number(r.rows[0]?.total || 0);
         res.json({ count });
     } catch (e) {
         res.json({ count: 0 });
+    }
+});
+
+// Admin-endpoint til at opdatere manuel puljestatus
+app.post('/api/admin/pool-status', async (req, res) => {
+    if (!adminOK(req)) return res.status(401).json({ error: 'Forkert.' });
+    try {
+        const { count } = req.body;
+        await db.query("INSERT INTO site_settings (key, value) VALUES ('manual_pool_count', $1) ON CONFLICT (key) DO UPDATE SET value = $1", [String(count)]);
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ error: 'Kunne ikke opdatere puljen.' });
     }
 });
 
@@ -149,7 +169,10 @@ app.post('/api/checkout',async(req,res)=>{try{
 
 app.post('/api/confirm-payment',async(req,res)=>{try{const stripe=require('stripe')(process.env.STRIPE_SECRET_KEY),s=await stripe.checkout.sessions.retrieve(req.body.sessionId);if(s.metadata?.orderId!==req.body.orderId)return res.status(400).json({error:'Fejl'});if(s.payment_status==='paid'){const q=await db.query("UPDATE orders SET payment_status='paid',status=CASE WHEN status='payment_pending' THEN 'awaiting_cards' ELSE status END WHERE order_id=$1 RETURNING status",[req.body.orderId]);if(q.rows[0]?.status==='awaiting_cards')await timeline(req.body.orderId,'awaiting_cards','Betaling registreret.');}res.json(await publicOrder(req.body.orderId))}catch(e){res.status(500).json({error:'Fejl'})}});
 app.post('/api/track',async(req,res)=>{const id=String(req.body?.orderId||'').trim().toUpperCase(),email=String(req.body?.email||'').trim().toLowerCase(),r=await db.query('SELECT order_id FROM orders WHERE order_id=$1 AND customer_email=$2',[id,email]);if(!r.rows[0])return res.status(404).json({error:'Ikke fundet.'});res.json(await publicOrder(id))});
-app.get('/api/admin/orders',async(req,res)=>{if(!adminOK(req))return res.status(401).json({error:'Forkert.'});const r=await db.query('SELECT * FROM orders ORDER BY created_at DESC'),orders=[];for(const o of r.rows){const p=await publicOrder(o.order_id);orders.push({...o,...p})}const poolCards=r.rows.filter(o=>['cards_received','awaiting_batch'].includes(o.status)).reduce((n,o)=>n+o.qty,0),members=Number((await db.query('SELECT COUNT(*) c FROM users WHERE membership_active=TRUE')).rows[0].c);res.json({orders,statuses:STATUS,stats:{orders:r.rowCount,poolCards,paidRevenueDkk:r.rows.filter(o=>o.payment_status==='paid').reduce((n,o)=>n+o.total_dkk,0),members}})});
+
+app.get('/api/admin/orders',async(req,res)=>{if(!adminOK(req))return res.status(401).json({error:'Forkert.'});const r=await db.query('SELECT * FROM orders ORDER BY created_at DESC'),orders=[];for(const o of r.rows){const p=await publicOrder(o.order_id);orders.push({...o,...p})}const poolCards=r.rows.filter(o=>['cards_received','awaiting_batch'].includes(o.status)).reduce((n,o)=>n+o.qty,0),members=Number((await db.query('SELECT COUNT(*) c FROM users WHERE membership_active=TRUE')).rows[0].c);
+const manualPool = await db.query("SELECT value FROM site_settings WHERE key='manual_pool_count'");
+res.json({orders,statuses:STATUS,stats:{orders:r.rowCount,poolCards:manualPool.rows[0]?.value ?? poolCards,paidRevenueDkk:r.rows.filter(o=>o.payment_status==='paid').reduce((n,o)=>n+o.total_dkk,0),members}});});
 
 app.patch('/api/admin/orders/:id',async(req,res)=>{if(!adminOK(req))return res.status(401).json({error:'Forkert.'});const {status,batch,trackingNumber,note}=req.body||{};const cur=(await db.query('SELECT * FROM orders WHERE order_id=$1',[req.params.id])).rows[0];if(!cur)return res.status(404).json({error:'Ikke fundet.'});
 if(status&&status!==cur.status){await db.query('UPDATE orders SET status=$1 WHERE order_id=$2',[status,req.params.id]);await timeline(req.params.id,status,note||'');sendOrderStatusEmail(cur.customer_email,cur.customer_name,cur.order_id,STATUS[status]||status,trackingNumber||cur.tracking_number);}
