@@ -72,7 +72,7 @@
         <!-- SEKTION: BRUGER- OG MEDLEMSKABSHÅNDTERING -->
         <div class="admin-card">
             <h2>Registrerede Brugerkonti & Medlemskaber</h2>
-            <p style="color: #aaa; font-size: 14px; margin-bottom: 15px;">Her kan du administrere brugere, give gratis medlemskaber til venner eller slette konti.</p>
+            <p style="color: #aaa; font-size: 14px; margin-bottom: 15px;">Administrer brugere, tildel gratis VIP-medlemskaber til venner, opdatér eller slet konti.</p>
             <div style="overflow-x: auto;">
                 <table>
                     <thead>
@@ -295,11 +295,12 @@
                         </td>
                         <td style="color: #888; font-size: 13px;">${new Date(u.created_at).toLocaleDateString('da-DK')}</td>
                         <td>
-                            <div style="display: flex; gap: 6px; align-items: center;">
-                                <button onclick="toggleMembership(${u.id}, ${!u.membership_active})" class="btn small" style="background: ${u.membership_active ? '#ff4d5a' : '#2ec4b6'}; padding: 6px 10px; font-size: 12px;">
+                            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                                <button onclick="toggleMembership(${u.id}, ${!u.membership_active})" class="btn small" style="background: ${u.membership_active ? '#ff4d5a' : '#2ec4b6'}; padding: 5px 8px; font-size: 11px;">
                                     ${u.membership_active ? 'Deaktivér' : 'Aktivér'}
                                 </button>
-                                <button onclick="deleteUser(${u.id})" class="btn ghost small" style="color: #ff4d5a; border-color: #ff4d5a; padding: 6px 10px; font-size: 12px;">Slet</button>
+                                <button onclick="updateUserPlan(${u.id})" class="btn small" style="background: #3a86ff; padding: 5px 8px; font-size: 11px; color: #fff;">Opdatér</button>
+                                <button onclick="deleteUser(${u.id})" class="btn ghost small" style="color: #ff4d5a; border-color: #ff4d5a; padding: 5px 8px; font-size: 11px;">Slet</button>
                             </div>
                         </td>
                     </tr>
@@ -330,6 +331,28 @@
             }
         }
 
+        async function updateUserPlan(userId) {
+            const planSelect = document.getElementById(`plan-${userId}`);
+            const plan = planSelect ? planSelect.value : 'monthly';
+
+            try {
+                const res = await fetch(`/api/admin/users/${userId}`, {
+                    method: 'PATCH',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'x-admin-password': adminPass 
+                    },
+                    body: JSON.stringify({ membership_active: true, membership_plan: plan })
+                });
+                if (!res.ok) throw new Error('Kunne ikke opdatere plan');
+                alert('Brugerens medlemsplan er opdateret og aktiveret!');
+                loadAdminUsers();
+                loadDashboardData();
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
         async function deleteUser(userId) {
             if (!confirm('Er du sikker på, at du vil slette denne bruger permanent?')) return;
 
@@ -339,6 +362,7 @@
                     headers: { 'x-admin-password': adminPass }
                 });
                 if (!res.ok) throw new Error('Kunne ikke slette bruger');
+                alert('Brugeren er slettet.');
                 loadAdminUsers();
                 loadDashboardData();
             } catch (err) {
