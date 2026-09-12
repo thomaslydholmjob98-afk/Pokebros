@@ -34,6 +34,16 @@
             z-index: 9998; pointer-events: none; animation: fall linear forwards;
             filter: drop-shadow(0 3px 8px rgba(0,0,0,0.4));
         }
+
+        /* Solgt-elementer til produkter på shoppen */
+        .product-card { position: relative; }
+        .sold-badge {
+            position: absolute; top: 15px; right: 15px;
+            background: #e63946; color: #fff; padding: 6px 14px;
+            font-weight: bold; font-size: 14px; border-radius: 4px;
+            letter-spacing: 1px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); z-index: 10;
+        }
+        .sold-overlay { opacity: 0.5; filter: grayscale(40%); }
     </style>
 </head>
 <body>
