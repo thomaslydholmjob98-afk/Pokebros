@@ -3,7 +3,7 @@ const session = require('express-session');
 const pgSession = require('connect-pg-simple')(express);
 const { Pool } = require('pg');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const { BREVO_API_KEY, BREVO_SENDER_EMAIL } = process.env;
+const bcrypt = require('bcrypt');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -77,7 +77,7 @@ app.get('/api/pool-status', async (req, res) => {
         const count = result.rows[0] ? result.rows[0].count : 0;
         res.json({ count });
     } catch (e) {
-        res.json({ count: 12 }); // Standard fallback
+        res.json({ count: 12 });
     }
 });
 
@@ -96,6 +96,20 @@ app.post('/api/admin/pool-status', async (req, res) => {
 });
 
 // -------------------------------------------------------------
+// AUTH API (Bruger login & session)
+// -------------------------------------------------------------
+app.get('/api/auth/me', async (req, res) => {
+    if (!req.session.userId) return res.json({ loggedIn: false });
+    try {
+        const userRes = await pool.query('SELECT id, name, email, phone, membership_active FROM users WHERE id = $1', [req.session.userId]);
+        if (!userRes.rows[0]) return res.json({ loggedIn: false });
+        res.json({ loggedIn: true, user: { ...userRes.rows[0], membership: { active: userRes.rows[0].membership_active } } });
+    } catch (e) {
+        res.json({ loggedIn: false });
+    }
+});
+
+// -------------------------------------------------------------
 // STRIPE CHECKOUT & ORDRE API
 // -------------------------------------------------------------
 app.post('/api/checkout', async (req, res) => {
@@ -105,7 +119,6 @@ app.post('/api/checkout', async (req, res) => {
         const basePrices = { bulk: 279, economy: 299, standard: 499, express: 899, walkthrough: 2199, unlimited: 2199 };
         let pricePerCard = basePrices[tier] || 279;
 
-        // Tjek om brugeren er medlem og har medlemsrabat
         if (req.session.userId) {
             const userRes = await pool.query('SELECT membership_active FROM users WHERE id = $1', [req.session.userId]);
             if (userRes.rows[0]?.membership_active) {
@@ -118,10 +131,8 @@ app.post('/api/checkout', async (req, res) => {
         let shipPrice = shippingMethod === 'hjemmelevering' ? 69 : 49;
         let totalDkk = subtotal + shipPrice;
 
-        let discountAmount = 0;
         if (coupon && coupon.trim().toUpperCase() === 'MASTER2026') {
-            discountAmount = Math.round(totalDkk * 0.10);
-            totalDkk -= discountAmount;
+            totalDkk -= Math.round(totalDkk * 0.10);
         }
 
         const orderId = 'TPB-' + Math.floor(100000 + Math.random() * 900000);
