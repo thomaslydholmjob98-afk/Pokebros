@@ -62,6 +62,9 @@ async function initDb() {
             );
         `);
 
+        // Sikr at image_url kan rumme base64-data
+        await pool.query(`ALTER TABLE products ALTER COLUMN image_url TYPE TEXT;`).catch(() => {});
+
         await pool.query(`
             INSERT INTO pool_status (id, count) VALUES (1, 12)
             ON CONFLICT (id) DO NOTHING;
@@ -73,8 +76,9 @@ async function initDb() {
 }
 initDb();
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Hævet payload-grænse til 50mb for at tillade direkte billed-uploads
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use(session({
     store: new pgSession({ pool: pool, tableName: 'session' }),
@@ -339,6 +343,7 @@ app.post('/api/admin/products', checkAdmin, async (req, res) => {
         );
         res.json({ success: true });
     } catch (e) {
+        console.error('Produkt oprettelsesfejl:', e);
         res.status(500).json({ error: 'Kunne ikke oprette produkt i databasen' });
     }
 });
