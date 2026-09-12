@@ -98,7 +98,6 @@
             </div>
         </div>
 
-        <!-- OPRET PRODUKT MED DIREKTE UPLOAD -->
         <div class="admin-card">
             <h2>Opret nyt produkt i Shoppen</h2>
             <form id="productForm" onsubmit="createProduct(event)" style="display: flex; flex-direction: column; gap: 15px;">
@@ -128,6 +127,26 @@
 
                 <button type="submit" id="createProductBtn" class="btn" style="padding: 12px 24px; align-self: flex-start;">Opret produkt</button>
             </form>
+        </div>
+
+        <!-- NY SEKTION: ADMINISTRATION AF PRODUKTER (SLET / SOLGT) -->
+        <div class="admin-card">
+            <h2>Eksisterende Produkter i Shoppen</h2>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Billede</th>
+                            <th>Titel</th>
+                            <th>Pris</th>
+                            <th>Status / Handling</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminProductsTableBody">
+                        <tr><td colspan="4" style="text-align: center; color: #888;">Henter produkter...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div class="admin-card">
@@ -209,6 +228,7 @@
 
                 loadDashboardData();
                 loadSellRequests();
+                loadAdminProducts();
             } catch (err) {
                 errorEl.textContent = err.message;
                 if (err.message === 'Forkert adgangskode') {
@@ -305,11 +325,72 @@
                 document.getElementById('prodImagePreview').style.display = 'none';
                 document.getElementById('uploadPrompt').textContent = '📸 Klik her for at vælge eller tage et billede fra din enhed';
                 productBase64Image = '';
+                loadAdminProducts();
             } catch (err) { 
                 alert('Kunne ikke oprette produkt: ' + err.message); 
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Opret produkt';
+            }
+        }
+
+        async function loadAdminProducts() {
+            const tbody = document.getElementById('adminProductsTableBody');
+            try {
+                const res = await fetch('/api/products');
+                const data = await res.json();
+                
+                if (!data.products || data.products.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #888;">Ingen produkter i shoppen endnu.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.products.map(p => `
+                    <tr>
+                        <td><img src="${p.image_url || ''}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;" alt=""></td>
+                        <td><b>${p.title}</b><br><small style="color:#aaa;">${p.category || ''}</small></td>
+                        <td>${p.price_dkk} kr.</td>
+                        <td>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <select onchange="updateProductStatus(${p.id}, this.value)" style="background: #1a1e29; color: #fff; border: 1px solid #333; padding: 6px; border-radius: 4px;">
+                                    <option value="til salg" ${p.status !== 'solgt' ? 'selected' : ''}>Til salg</option>
+                                    <option value="solgt" ${p.status === 'solgt' ? 'selected' : ''}>Solgt</option>
+                                </select>
+                                <button onclick="deleteProduct(${p.id})" class="btn ghost" style="padding: 6px 10px; color: #ff4d5a; border-color: #ff4d5a;">Slet</button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #ff4d5a;">Fejl ved hentning af produkter.</td></tr>';
+            }
+        }
+
+        async function updateProductStatus(id, status) {
+            try {
+                const res = await fetch(`/api/admin/products/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPass },
+                    body: JSON.stringify({ status })
+                });
+                if (!res.ok) throw new Error('Fejl');
+                loadAdminProducts();
+            } catch (e) {
+                alert('Kunne ikke opdatere produktets status');
+            }
+        }
+
+        async function deleteProduct(id) {
+            if (!confirm('Er du sikker på, at du vil slette dette produkt permanent?')) return;
+            try {
+                const res = await fetch(`/api/admin/products/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'x-admin-password': adminPass }
+                });
+                if (!res.ok) throw new Error('Fejl');
+                loadAdminProducts();
+            } catch (e) {
+                alert('Kunne ikke slette produktet');
             }
         }
 
