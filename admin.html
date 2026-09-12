@@ -16,7 +16,7 @@
         .admin-card { background: #111318; border: 1px solid #222; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .admin-card h2 { color: #e63946; margin-top: 0; margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
-        table th, table td { padding: 12px; border-bottom: 1px solid #222; text-align: left; }
+        table th, table td { padding: 12px; border-bottom: 1px solid #222; text-align: left; position: relative; z-index: 2; }
         table th { background: #1a1e29; color: #aaa; }
         .form-inline { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .form-inline input, .form-inline select { padding: 8px 12px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; }
@@ -28,6 +28,22 @@
         .upload-field { border: 2px dashed #333; border-radius: 8px; padding: 20px; text-align: center; background: #1a1e29; cursor: pointer; transition: border-color 0.2s; margin-top: 5px; }
         .upload-field:hover { border-color: #e63946; }
         .upload-preview { max-height: 140px; border-radius: 6px; margin-top: 10px; display: none; margin-left: auto; margin-right: auto; }
+        
+        /* Ekstra sikkerhed til sletteknap for at sikre klikbarhed */
+        .force-delete-btn {
+            background-color: #ff4d5a !important;
+            color: #fff !important;
+            border: 1px solid #ff4d5a !important;
+            padding: 6px 12px !important;
+            border-radius: 4px !important;
+            font-weight: bold !important;
+            cursor: pointer !important;
+            pointer-events: auto !important;
+            z-index: 9999 !important;
+        }
+        .force-delete-btn:hover {
+            background-color: #d90429 !important;
+        }
     </style>
 </head>
 <body>
@@ -306,7 +322,7 @@
                                     ${u.membership_active ? 'Deaktivér' : 'Aktivér'}
                                 </button>
                                 <button type="button" onclick="updateUserPlan(${u.id})" class="btn small" style="background: #3a86ff; padding: 5px 8px; font-size: 11px; color: #fff; cursor: pointer;">Opdatér</button>
-                                <button type="button" onclick="window.deleteUserRecord(${u.id})" class="btn ghost small" style="color: #ff4d5a; border-color: #ff4d5a; padding: 5px 8px; font-size: 11px; cursor: pointer;">Slet</button>
+                                <button type="button" onclick="try { if(confirm('Vil du slette bruger ${u.email}?')) { fetch('/api/admin/users/${u.id}', { method: 'DELETE', headers: { 'x-admin-password': '${adminPass}' } }).then(r => r.json()).then(d => { alert('Bruger slettet!'); loadAdminUsers(); loadDashboardData(); }).catch(e => alert('Fejl: ' + e)); } } catch(err) { alert(err); }" class="force-delete-btn">Slet</button>
                             </div>
                         </td>
                     </tr>
@@ -358,29 +374,6 @@
                 alert(err.message);
             }
         }
-
-        // Global funktion til sletning, som tvinges direkte igennem fra knappen
-        window.deleteUserRecord = async function(userId) {
-            if (!confirm('Er du sikker på, at du vil slette denne bruger og alt dens tilhørende data permanent?')) return;
-
-            try {
-                const res = await fetch(`/api/admin/users/${userId}`, {
-                    method: 'DELETE',
-                    headers: { 'x-admin-password': adminPass }
-                });
-                
-                if (!res.ok) {
-                    const errData = await res.json().catch(() => ({}));
-                    throw new Error(errData.error || 'Kunne ikke slette bruger');
-                }
-                
-                alert('Brugeren og alt tilhørende data er slettet.');
-                loadAdminUsers();
-                loadDashboardData();
-            } catch (err) {
-                alert('Fejl ved sletning: ' + err.message);
-            }
-        };
 
         function handleProductImageSelect(event) {
             const file = event.target.files[0];
