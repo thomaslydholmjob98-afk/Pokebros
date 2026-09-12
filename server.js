@@ -166,24 +166,20 @@ app.patch('/api/admin/users/:id', checkAdmin, async (req, res) => {
 app.delete('/api/admin/users/:id', checkAdmin, async (req, res) => {
     const userId = req.params.id;
     try {
-        // 1. Hent brugerens e-mail for at kunne slette relaterede ordrer
+        // Hent brugerens e-mail for at kunne slette relaterede ordrer
         const userRes = await pool.query('SELECT email FROM users WHERE id = $1', [userId]);
         if (userRes.rows.length > 0) {
             const userEmail = userRes.rows[0].email;
-            
-            // Slet alle ordrer tilknyttet denne e-mail
             await pool.query('DELETE FROM orders WHERE customer_email = $1', [userEmail]);
         }
 
-        // 2. Slet aktive aktive sessioner, hvor brugeren er logget ind (så de logges ud med det samme)
+        // Slet sessioner og selve brugeren
         await pool.query(`DELETE FROM session WHERE sess::text LIKE $1`, [`%"userId":${userId}%`]);
-
-        // 3. Slet selve brugeren fra databasen
         await pool.query('DELETE FROM users WHERE id = $1', [userId]);
 
-        res.json({ success: true, message: 'Bruger og al tilhørende data er slettet.' });
+        res.json({ success: true });
     } catch (e) {
-        console.error('Fuld sletning af bruger fejlede:', e);
+        console.error('Sletning af bruger fejlede:', e);
         res.status(500).json({ error: 'Kunne ikke slette bruger: ' + e.message });
     }
 });
@@ -237,7 +233,6 @@ app.get('/api/auth/me', async (req, res) => {
     try {
         const result = await pool.query('SELECT id, name, email, phone, membership_active, membership_plan FROM users WHERE id = $1', [req.session.userId]);
         if (result.rows.length === 0) {
-            // Hvis brugeren er slettet fra databasen, men sessionen stadig findes
             req.session.destroy(() => {});
             return res.json({ loggedIn: false });
         }
