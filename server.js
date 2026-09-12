@@ -78,3 +78,37 @@ app.patch('/api/admin/orders/:id',async(req,res)=>{if(!adminOK(req))return res.s
 app.get('/api/health',async(req,res)=>{try{await db.query('SELECT 1');res.json({ok:true})}catch{res.status(503).json({ok:false})}});
 app.use((err,req,res,next)=>{console.error(err);res.status(500).json({error:'Der opstod en serverfejl.'})});
 app.listen(PORT,()=>console.log(`The Poke Bros kører på port ${PORT}`));
+// Route til "Sælg din samling" formularen
+app.post('/api/sell-collection', authLimiter, async (req, res) => {
+    try {
+        const { name, email, phone, description, link } = req.body;
+
+        if (!name || !email || !description) {
+            return res.status(400).json({ error: 'Udfyld venligst navn, e-mail og beskrivelse af samlingen.' });
+        }
+
+        // Send mail til dig selv om det nye tilbud
+        await transporter.sendMail({
+            from: process.env.EMAIL_FROM || 'Poke Bros <thomaslydholmjob98@gmail.com>',
+            to: 'thomaslydholmjob98@gmail.com',
+            subject: `[Poke Bros Opkøb] Ny samling indsendt af ${name}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                    <h2>Ny henvendelse: Sælg Samling</h2>
+                    <p><strong>Navn:</strong> ${name}</p>
+                    <p><strong>E-mail:</strong> ${email}</p>
+                    <p><strong>Telefon:</strong> ${phone || 'Ikke angivet'}</p>
+                    <hr style="border: 0; border-top: 1px solid #ccc;">
+                    <h3>Beskrivelse af samlingen:</h3>
+                    <p style="white-space: pre-wrap;">${description}</p>
+                    ${link ? `<p><strong>Link til billeder / Drive / Imgur:</strong> <a href="${link}" target="_blank">${link}</a></p>` : ''}
+                </div>
+            `
+        });
+
+        res.json({ ok: true, message: 'Tak for din henvendelse! Vi vender tilbage med et tilbud inden for 24 timer.' });
+    } catch (err) {
+        console.error('Fejl ved indsendelse af samling:', err);
+        res.status(500).json({ error: 'Kunne ikke sende din henvendelse. Prøv igen senere.' });
+    }
+});
