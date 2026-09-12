@@ -25,7 +25,6 @@
         textarea.gen-output { width: 100%; height: 200px; padding: 15px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 6px; font-family: monospace; font-size: 14px; box-sizing: border-box; resize: vertical; }
         .success-msg { color: #2ecc71; font-weight: bold; font-size: 14px; margin-top: 10px; display: none; }
         
-        /* Direkte billedeupload-boks */
         .upload-field { border: 2px dashed #333; border-radius: 8px; padding: 20px; text-align: center; background: #1a1e29; cursor: pointer; transition: border-color 0.2s; margin-top: 5px; }
         .upload-field:hover { border-color: #e63946; }
         .upload-preview { max-height: 150px; border-radius: 6px; margin-top: 10px; display: none; margin-left: auto; margin-right: auto; }
@@ -70,7 +69,6 @@
             </div>
         </div>
 
-        <!-- Indkomne henvendelser fra "Sælg din samling" -->
         <div class="admin-card">
             <h2>Indkomne Salgshenvendelser (Sælg din samling)</h2>
             <div style="overflow-x: auto;">
@@ -100,14 +98,13 @@
             </div>
         </div>
 
-        <!-- PRODUKT OPRETTELSE MED DIREKTE UPLOAD FRA MOBIL / PC -->
         <div class="admin-card">
             <h2>Opret nyt produkt i Shoppen</h2>
             <form id="productForm" onsubmit="createProduct(event)" style="display: flex; flex-direction: column; gap: 15px;">
                 <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                     <div style="flex: 2; min-width: 200px;">
                         <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Titel *</label>
-                        <input type="text" id="prodTitle" placeholder="Fx Charizard Base Set Holo PSA 9" required style="width: 100%; padding: 10px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; box-sizing: border-box;">
+                        <input type="text" id="prodTitle" placeholder="Fx Rapidash Base Set" required style="width: 100%; padding: 10px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; box-sizing: border-box;">
                     </div>
                     <div style="flex: 1; min-width: 140px;">
                         <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Kategori</label>
@@ -115,7 +112,7 @@
                     </div>
                     <div style="flex: 1; min-width: 100px;">
                         <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Pris (DKK) *</label>
-                        <input type="number" id="prodPrice" placeholder="1499" required style="width: 100%; padding: 10px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; box-sizing: border-box;">
+                        <input type="number" id="prodPrice" placeholder="1500" required style="width: 100%; padding: 10px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; box-sizing: border-box;">
                     </div>
                 </div>
 
@@ -224,19 +221,46 @@
             location.reload();
         }
 
-        // Håndter valg af billede og lav det om til base64-data
+        // Automatisk billedkomprimering via Canvas (max 800px, JPEG 75% kvalitet)
         function handleProductImageSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
 
             const reader = new FileReader();
             reader.onload = function(e) {
-                productBase64Image = e.target.result;
-                const preview = document.getElementById('prodImagePreview');
-                const promptText = document.getElementById('uploadPrompt');
-                preview.src = productBase64Image;
-                preview.style.display = 'block';
-                promptText.textContent = '✅ Billedet er valgt! (Klik for at skifte)';
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const maxDim = 800;
+
+                    if (width > height) {
+                        if (width > maxDim) {
+                            height *= maxDim / width;
+                            width = maxDim;
+                        }
+                    } else {
+                        if (height > maxDim) {
+                            width *= maxDim / height;
+                            height = maxDim;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    productBase64Image = canvas.toDataURL('image/jpeg', 0.75);
+
+                    const preview = document.getElementById('prodImagePreview');
+                    const promptText = document.getElementById('uploadPrompt');
+                    preview.src = productBase64Image;
+                    preview.style.display = 'block';
+                    promptText.textContent = '✅ Billedet er valgt og optimeret! (Klik for at skifte)';
+                };
+                img.src = e.target.result;
             };
             reader.readAsDataURL(file);
         }
