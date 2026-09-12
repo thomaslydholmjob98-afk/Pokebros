@@ -164,14 +164,14 @@ app.patch('/api/admin/users/:id', checkAdmin, async (req, res) => {
 
 // ADMIN: SLET BRUGER
 app.delete('/api/admin/users/:id', checkAdmin, async (req, res) => {
-    const { id } = req.params;
+    const userId = req.params.id;
     try {
-        const userRes = await pool.query('SELECT email FROM users WHERE id = $1', [id]);
+        const userRes = await pool.query('SELECT email FROM users WHERE id = $1', [userId]);
         if (userRes.rows.length > 0) {
             const email = userRes.rows[0].email;
             await pool.query('DELETE FROM orders WHERE customer_email = $1', [email]);
         }
-        await pool.query('DELETE FROM users WHERE id = $1', [id]);
+        await pool.query('DELETE FROM users WHERE id = $1', [userId]);
         res.json({ success: true });
     } catch (e) {
         console.error('Sletning af bruger fejlede:', e);
