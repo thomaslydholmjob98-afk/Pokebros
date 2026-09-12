@@ -71,8 +71,13 @@
 
         <!-- SEKTION: BRUGER- OG MEDLEMSKABSHÅNDTERING -->
         <div class="admin-card">
-            <h2>Registrerede Brugerkonti & Medlemskaber</h2>
-            <p style="color: #aaa; font-size: 14px; margin-bottom: 15px;">Administrer brugere, tildel gratis VIP-medlemskaber til venner, opdatér eller slet konti.</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                <div>
+                    <h2 style="margin: 0;">Registrerede Brugerkonti & Medlemskaber</h2>
+                    <p style="color: #aaa; font-size: 14px; margin: 4px 0 0 0;">Administrer brugere, tildel gratis VIP-medlemskaber til venner, opdatér eller slet konti.</p>
+                </div>
+                <button onclick="loadAdminUsers()" class="btn small" style="background: #3a86ff; padding: 8px 14px; color: #fff; cursor: pointer;">🔄 Opdatér liste</button>
+            </div>
             <div style="overflow-x: auto;">
                 <table>
                     <thead>
@@ -354,15 +359,17 @@
         }
 
         async function deleteUser(userId) {
-            if (!confirm('Er du sikker på, at du vil slette denne bruger permanent?')) return;
+            if (!confirm('Er du sikker på, at du vil slette denne bruger og alt dens tilhørende data permanent?')) return;
 
             try {
                 const res = await fetch(`/api/admin/users/${userId}`, {
                     method: 'DELETE',
                     headers: { 'x-admin-password': adminPass }
                 });
-                if (!res.ok) throw new Error('Kunne ikke slette bruger');
-                alert('Brugeren er slettet.');
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Kunne ikke slette bruger');
+                
+                alert('Brugeren og alt tilhørende data er slettet.');
                 loadAdminUsers();
                 loadDashboardData();
             } catch (err) {
