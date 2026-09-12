@@ -151,20 +151,36 @@
         }
 
         async function verifyAndLoadDashboard() {
+            const errorEl = document.getElementById('loginError');
+            errorEl.textContent = '';
+
             try {
-                const res = await fetch('/api/admin/orders', {
-                    headers: { 'x-admin-password': adminPass }
+                // 1. Tjek om adgangskoden er korrekt
+                const loginRes = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: adminPass })
                 });
-                if (!res.ok) throw new Error('Forkert adgangskode');
+
+                if (loginRes.status === 401) {
+                    throw new Error('Forkert adgangskode');
+                }
+                if (!loginRes.ok) {
+                    throw new Error('Serverfejl. Prøv igen.');
+                }
 
                 localStorage.setItem('tpb_admin_pass', adminPass);
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('adminContent').style.display = 'block';
-                loadDashboardData(res);
+
+                // 2. Hent dashboard data
+                loadDashboardData();
                 generatePost();
             } catch (err) {
-                document.getElementById('loginError').textContent = 'Forkert adgangskode. Prøv igen.';
-                localStorage.removeItem('tpb_admin_pass');
+                errorEl.textContent = err.message;
+                if (err.message === 'Forkert adgangskode') {
+                    localStorage.removeItem('tpb_admin_pass');
+                }
             }
         }
 
@@ -173,48 +189,54 @@
             location.reload();
         }
 
-        async function loadDashboardData(response) {
-            const data = await response || await fetch('/api/admin/orders', { headers: { 'x-admin-password': adminPass } }).then(r => r.json());
-            
-            document.getElementById('statRevenue').textContent = (data.stats.paidRevenueDkk || 0).toLocaleString('da-DK') + ' kr.';
-            document.getElementById('statOrders').textContent = data.stats.orders || 0;
-            document.getElementById('statPool').textContent = (data.stats.poolCards || 0) + ' stk.';
-            document.getElementById('statMembers').textContent = data.stats.members || 0;
+        async function loadDashboardData() {
+            try {
+                const res = await fetch('/api/admin/orders', { headers: { 'x-admin-password': adminPass } });
+                if (!res.ok) return;
+                const data = await res.json();
+                
+                document.getElementById('statRevenue').textContent = (data.stats.paidRevenueDkk || 0).toLocaleString('da-DK') + ' kr.';
+                document.getElementById('statOrders').textContent = data.stats.orders || 0;
+                document.getElementById('statPool').textContent = (data.stats.poolCards || 0) + ' stk.';
+                document.getElementById('statMembers').textContent = data.stats.members || 0;
 
-            document.getElementById('genPoolCount').value = data.stats.poolCards || 0;
-            generatePost();
+                document.getElementById('genPoolCount').value = data.stats.poolCards || 0;
+                generatePost();
 
-            const tbody = document.getElementById('ordersTableBody');
-            if (!data.orders || data.orders.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #888;">Ingen ordrer fundet.</td></tr>';
-                return;
+                const tbody = document.getElementById('ordersTableBody');
+                if (!data.orders || data.orders.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #888;">Ingen ordrer fundet.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.orders.map(o => `
+                    <tr>
+                        <td>
+                            <b>${o.order_id}</b><br>
+                            <span style="font-size: 11px; color: #888;">${new Date(o.created_at).toLocaleDateString('da-DK')}</span><br>
+                            <a href="packingslip.html?order=${o.order_id}" target="_blank" style="font-size: 11px; color: #e63946; text-decoration: underline;">📄 Pakkeseddel</a>
+                        </td>
+                        <td>
+                            <b>${o.customer_name}</b><br>
+                            <span style="font-size: 12px; color: #aaa;">${o.customer_email}</span><br>
+                            <span style="font-size: 11px; color: #666;">${o.customer_address}, ${o.customer_postal} ${o.customer_city}</span>
+                        </td>
+                        <td>${o.tier.toUpperCase()} (${o.qty} stk.)</td>
+                        <td><b>${o.total_dkk} kr.</b></td>
+                        <td><span style="color: ${o.payment_status === 'paid' ? '#2ecc71' : '#f39c12'};">${o.payment_status}</span></td>
+                        <td>
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <select onchange="updateOrderStatus('${o.order_id}', this.value)" style="background: #1a1e29; color: #fff; border: 1px solid #333; padding: 6px; border-radius: 4px;">
+                                    ${Object.entries(data.statuses || {}).map(([key, label]) => `<option value="${key}" ${o.status === key ? 'selected' : ''}>${label}</option>`).join('')}
+                                </select>
+                                <input type="text" placeholder="Trackingnummer" value="${o.tracking_number || ''}" onchange="updateTracking('${o.order_id}', this.value)" style="background: #1a1e29; color: #fff; border: 1px solid #333; padding: 4px 6px; border-radius: 4px; font-size: 12px;">
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error('Fejl ved indlæsning af dashboard data:', e);
             }
-
-            tbody.innerHTML = data.orders.map(o => `
-                <tr>
-                    <td>
-                        <b>${o.order_id}</b><br>
-                        <span style="font-size: 11px; color: #888;">${new Date(o.created_at).toLocaleDateString('da-DK')}</span><br>
-                        <a href="packingslip.html?order=${o.order_id}" target="_blank" style="font-size: 11px; color: #e63946; text-decoration: underline;">📄 Pakkeseddel</a>
-                    </td>
-                    <td>
-                        <b>${o.customer_name}</b><br>
-                        <span style="font-size: 12px; color: #aaa;">${o.customer_email}</span><br>
-                        <span style="font-size: 11px; color: #666;">${o.customer_address}, ${o.customer_postal} ${o.customer_city}</span>
-                    </td>
-                    <td>${o.tier.toUpperCase()} (${o.qty} stk.)</td>
-                    <td><b>${o.total_dkk} kr.</b></td>
-                    <td><span style="color: ${o.payment_status === 'paid' ? '#2ecc71' : '#f39c12'};">${o.payment_status}</span></td>
-                    <td>
-                        <div style="display: flex; flex-direction: column; gap: 6px;">
-                            <select onchange="updateOrderStatus('${o.order_id}', this.value)" style="background: #1a1e29; color: #fff; border: 1px solid #333; padding: 6px; border-radius: 4px;">
-                                ${Object.entries(data.statuses).map(([key, label]) => `<option value="${key}" ${o.status === key ? 'selected' : ''}>${label}</option>`).join('')}
-                            </select>
-                            <input type="text" placeholder="Trackingnummer" value="${o.tracking_number || ''}" onchange="updateTracking('${o.order_id}', this.value)" style="background: #1a1e29; color: #fff; border: 1px solid #333; padding: 4px 6px; border-radius: 4px; font-size: 12px;">
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
         }
 
         async function updateOrderStatus(orderId, newStatus) {
