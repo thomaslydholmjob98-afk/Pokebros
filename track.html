@@ -1,3 +1,122 @@
-<!doctype html><html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Spor din grading | The Poke Bros</title><link rel="stylesheet" href="style.css"></head><body><header><a class="brand" href="/">THE POKE BROS</a><a class="btn small" href="/#order">Bestil grading</a></header><main class="track-wrap"><section><span class="eyebrow">ORDRESTATUS</span><h1>Spor dine kort</h1><p class="lead">Indtast dit ordrenummer og den e-mail, du brugte ved bestilling.</p><form id="trackForm" class="track-form"><label>Ordrenummer<input id="orderId" placeholder="TPB-20260910-ABC123" required></label><label>E-mail<input id="email" type="email" required></label><button class="btn" type="submit">Vis status</button><p id="msg" class="fineprint"></p></form><div id="result"></div></section></main><script>
-const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));trackForm.onsubmit=async e=>{e.preventDefault();msg.textContent='';result.innerHTML='';const r=await fetch('/api/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({orderId:orderId.value,email:email.value})});const j=await r.json();if(!r.ok){msg.textContent=j.error||'Ordren kunne ikke findes.';return}result.innerHTML=`<article class="track-card"><div class="track-title"><div><small>Ordre</small><h2>${esc(j.orderId)}</h2></div><span class="status-big">${esc(j.statusLabel)}</span></div><div class="track-meta"><span><b>${j.qty}</b> kort</span><span><b>${Number(j.totalDkk).toLocaleString('da-DK')} kr.</b> total</span>${j.batch?`<span><b>${esc(j.batch)}</b> CGC-pulje</span>`:''}${j.trackingNumber?`<span><b>${esc(j.trackingNumber)}</b> tracking</span>`:''}</div><div class="timeline">${(j.timeline||[]).map((t,i)=>`<div class="timeline-row"><i></i><div><b>${esc(t.label)}</b><span>${new Date(t.at).toLocaleString('da-DK')}${t.note?' • '+esc(t.note):''}</span></div></div>`).join('')}</div></article>`};
-</script><div style="text-align:center;padding:24px;font-size:13px;opacity:.75"><a href="/handelsbetingelser.html">Handelsbetingelser</a> · <a href="/privatliv.html">Privatlivspolitik</a></div></body></html>
+<!doctype html>
+<html lang="da">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Spor Ordre | The Poke Bros</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .track-container { max-width: 700px; margin: 40px auto; padding: 0 20px; color: #fff; }
+        .track-card { background: #111318; border: 1px solid #222; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .track-card h2 { color: #e63946; margin-top: 0; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #ccc; }
+        .form-group input { width: 100%; padding: 12px; border: 1px solid #333; border-radius: 6px; background: #1a1e29; color: #fff; font-size: 15px; box-sizing: border-box; }
+        
+        /* Tidslinje styling */
+        .timeline { position: relative; margin-top: 30px; padding-left: 30px; border-left: 2px solid #333; }
+        .timeline-item { position: relative; margin-bottom: 25px; }
+        .timeline-item::before { content: ''; position: absolute; left: -36px; top: 0; width: 14px; height: 14px; border-radius: 50%; background: #333; border: 3px solid #111318; }
+        .timeline-item.active::before { background: #e63946; box-shadow: 0 0 10px rgba(230,57,70,0.6); }
+        .timeline-date { font-size: 12px; color: #888; margin-bottom: 3px; }
+        .timeline-title { font-size: 16px; font-weight: bold; color: #fff; }
+        .timeline-desc { font-size: 14px; color: #aaa; margin-top: 4px; }
+    </style>
+</head>
+<body>
+    <header>
+        <a class="brand" href="index.html">THE POKE BROS</a>
+        <nav>
+            <a href="index.html">Forsiden</a>
+            <a href="shop.html">Shop</a>
+            <a href="account.html">Min konto</a>
+        </nav>
+    </header>
+
+    <main class="track-container">
+        <div class="track-card">
+            <h2>Spor din grading-ordre</h2>
+            <p style="color: #aaa; font-size: 14px;">Indtast dit ordrenummer (f.eks. TPB-2026...) og din e-mailadresse for at se status.</p>
+            
+            <form id="trackForm" style="margin-top: 20px;">
+                <div class="form-group">
+                    <label>Ordrenummer</label>
+                    <input type="text" id="orderId" placeholder="TPB-..." required style="text-transform: uppercase;">
+                </div>
+                <div class="form-group">
+                    <label>E-mailadresse</label>
+                    <input type="email" id="email" placeholder="din@email.dk" required>
+                </div>
+                <button type="submit" class="btn">Søg ordre</button>
+            </form>
+            <p id="errorMsg" style="color: #ff4d5a; margin-top: 15px; font-weight: bold;"></p>
+        </div>
+
+        <div id="resultCard" class="track-card" style="display: none;">
+            <h2>Ordredetaljer</h2>
+            <div id="orderSummary" style="background: #1a1e29; padding: 15px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #333;"></div>
+            
+            <h3 style="color: #fff; font-size: 18px; margin-bottom: 10px;">Proces-tidslinje</h3>
+            <div id="timelineContainer" class="timeline"></div>
+        </div>
+    </main>
+
+    <script>
+    document.getElementById('trackForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errorMsg = document.getElementById('errorMsg');
+        const resultCard = document.getElementById('resultCard');
+        errorMsg.textContent = 'Søger...';
+        resultCard.style.display = 'none';
+
+        const orderId = document.getElementById('orderId').value.trim();
+        const email = document.getElementById('email').value.trim();
+
+        try {
+            const res = await fetch('/api/track', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId, email })
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Ordren blev ikke fundet.');
+
+            errorMsg.textContent = '';
+            resultCard.style.display = 'block';
+
+            // Vis opsummering
+            document.getElementById('orderSummary').innerHTML = `
+                <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <div><b>Ordre:</b> ${data.orderId}</div>
+                    <div><b>Antal kort:</b> ${data.qty} stk. (${data.tier.toUpperCase()})</div>
+                    <div><b>Nuværende status:</b> <span style="color: #e63946; font-weight: bold;">${data.statusLabel}</span></div>
+                </div>
+                ${data.trackingNumber ? `<div style="margin-top: 10px;"><b>Retur-trackingnummer:</b> ${data.trackingNumber}</div>` : ''}
+            `;
+
+            // Vis tidslinje
+            const timelineEl = document.getElementById('timelineContainer');
+            if (!data.timeline || data.timeline.length === 0) {
+                timelineEl.innerHTML = '<p style="color: #888;">Ingen historik fundet endnu.</p>';
+            } else {
+                timelineEl.innerHTML = data.timeline.map((item, index) => {
+                    const isActive = index === data.timeline.length - 1;
+                    const dateStr = new Date(item.at).toLocaleString('da-DK', { dateStyle: 'short', timeStyle: 'short' });
+                    return `
+                        <div class="timeline-item ${isActive ? 'active' : ''}">
+                            <div class="timeline-date">${dateStr}</div>
+                            <div class="timeline-title">${item.label}</div>
+                            ${item.note ? `<div class="timeline-desc">${item.note}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+        } catch (err) {
+            errorMsg.textContent = err.message;
+        }
+    });
+    </script>
+</body>
+</html>
