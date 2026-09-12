@@ -13,13 +13,32 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// Automatisk oprettelse og opdatering af databasetabeller
+// Automatisk oprettelse og opdatering af databasetabeller (inklusiv session-tabel til Supabase)
 async function initDb() {
     try {
         await pool.query(`
+            CREATE TABLE IF NOT EXISTS session (
+                sid VARCHAR NOT NULL COLLATE "default",
+                sess JSON NOT NULL,
+                expire TIMESTAMP(6) NOT NULL,
+                CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
+            );
+            CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON session ("expire");
+
             CREATE TABLE IF NOT EXISTS pool_status (
                 id INT PRIMARY KEY,
                 count INT NOT NULL DEFAULT 0
+            );
+
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255),
+                email VARCHAR(255) UNIQUE NOT NULL,
+                phone VARCHAR(50),
+                password VARCHAR(255) NOT NULL,
+                membership_active BOOLEAN DEFAULT false,
+                membership_plan VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
             CREATE TABLE IF NOT EXISTS products (
@@ -63,29 +82,33 @@ async function initDb() {
             );
         `);
 
-        // Sikr at nødvendige kolonner findes og understøtter det rette format
         await pool.query(`
             ALTER TABLE products ALTER COLUMN image_url TYPE TEXT;
             ALTER TABLE products ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'til salg';
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_active BOOLEAN DEFAULT false;
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_plan VARCHAR(50);
         `).catch(() => {});
 
         await pool.query(`
             INSERT INTO pool_status (id, count) VALUES (1, 12)
             ON CONFLICT (id) DO NOTHING;
         `);
-        console.log('Database tabeller er initialiseret korrekt.');
+        console.log('Supabase database tabeller er initialiseret korrekt.');
     } catch (err) {
         console.error('DB Init Fejl:', err.message);
     }
 }
 initDb();
 
-// Hævet payload-grænse til 50mb for at tillade direkte billed-uploads
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use(session({
-    store: new pgSession({ pool: pool, tableName: 'session' }),
+    store: new pgSession({ 
+        pool: pool, 
+        tableName: 'session',
+        createTableIfMissing: true 
+    }),
     secret: process.env.SESSION_SECRET || 'tpb_secret_key_2026',
     resave: false,
     saveUninitialized: false,
@@ -94,7 +117,6 @@ app.use(session({
 
 app.use(express.static(__dirname));
 
-// Sikkerhedstjek for admin adgangskode ('Lydholm9320')
 function checkAdmin(req, res, next) {
     const adminPass = (req.headers['x-admin-password'] || '').trim();
     if (adminPass !== 'Lydholm9320') {
@@ -103,7 +125,6 @@ function checkAdmin(req, res, next) {
     next();
 }
 
-// Admin Login
 app.post('/api/admin/login', (req, res) => {
     const { password } = req.body || {};
     if ((password || '').trim() === 'Lydholm9320') {
@@ -112,18 +133,131 @@ app.post('/api/admin/login', (req, res) => {
     return res.status(401).json({ error: 'Forkert adgangskode' });
 });
 
+// BRUGER AUTHENTICATION & KONTO DATA
+app.post('/api/auth/register', async (req, res) => {
+    try {
+        const { name, email, phone, password } = req.body;
+        if (!email || !password) return res.status(400).json({ error: 'E-mail og adgangskode er påkrævet.' });
+
+        const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+        if (existing.rows.length > 0) return res.status(400).json({ error: 'E-mailen er allerede i brug.' });
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const result = await pool.query(
+            'INSERT INTO users (name, email, phone, password) VALUES ($1, $2, $3, $4) RETURNING id, name, email, phone, membership_active, membership_plan',
+            [name || '', email, phone || '', hashedPassword]
+        );
+
+        const user = result.rows[0];
+        req.session.userId = user.id;
+        res.json({ success: true, user });
+    } catch (err) {
+        console.error('Register fejl:', err);
+        res.status(500).json({ error: 'Kunne ikke oprette konto.' });
+    }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) return res.status(400).json({ error: 'Indtast e-mail og adgangskode.' });
+
+        const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        if (result.rows.length === 0) return res.status(401).json({ error: 'Ugyldig e-mail eller adgangskode.' });
+
+        const user = result.rows[0];
+        const match = await bcrypt.compare(password, user.password);
+        if (!match) return res.status(401).json({ error: 'Ugyldig e-mail eller adgangskode.' });
+
+        req.session.userId = user.id;
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Login fejl:', err);
+        res.status(500).json({ error: 'Kunne ikke logge ind.' });
+    }
+});
+
+app.get('/api/auth/me', async (req, res) => {
+    if (!req.session.userId) return res.json({ loggedIn: false });
+    try {
+        const result = await pool.query('SELECT id, name, email, phone, membership_active, membership_plan FROM users WHERE id = $1', [req.session.userId]);
+        if (result.rows.length === 0) return res.json({ loggedIn: false });
+
+        const user = result.rows[0];
+        res.json({
+            loggedIn: true,
+            user: {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                membership: { active: user.membership_active, plan: user.membership_plan }
+            }
+        });
+    } catch (err) {
+        res.json({ loggedIn: false });
+    }
+});
+
+app.post('/api/auth/logout', (req, res) => {
+    req.session.destroy(() => {
+        res.json({ success: true });
+    });
+});
+
+// HENT BRUGERPROFIL OG ORDRER TIL ACCOUNT.HTML
+app.get('/api/account', async (req, res) => {
+    if (!req.session.userId) return res.status(401).json({ error: 'Ikke logget ind' });
+    try {
+        const userRes = await pool.query('SELECT id, name, email, phone, membership_active, membership_plan FROM users WHERE id = $1', [req.session.userId]);
+        if (userRes.rows.length === 0) return res.status(401).json({ error: 'Bruger ikke fundet' });
+        const user = userRes.rows[0];
+
+        const ordersRes = await pool.query('SELECT * FROM orders WHERE customer_email = $1 ORDER BY created_at DESC', [user.email]);
+        
+        const statusLabels = {
+            'modtaget': 'Ordre Modtaget',
+            'under_behandling': 'Under Behandling',
+            'sendt_cgc': 'Sendt til CGC',
+            'hos_cgc': 'Hos CGC (Gradering)',
+            'retur': 'Pakket & Retur til Kunde'
+        };
+
+        const orders = ordersRes.rows.map(o => ({
+            orderId: o.order_id,
+            createdAt: o.created_at,
+            qty: o.qty,
+            tier: o.tier,
+            totalDkk: o.total_dkk,
+            statusLabel: statusLabels[o.status] || o.status,
+            trackingNumber: o.tracking_number
+        }));
+
+        res.json({
+            user: {
+                name: user.name,
+                email: user.email,
+                membership: {
+                    active: user.membership_active,
+                    plan: user.membership_plan
+                }
+            },
+            orders
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Databasefejl' });
+    }
+});
+
 // AFSENDELSE AF MAIL VIA BREVO REST API
 async function sendBrevoEmail({ name, email, phone, details, expectedPrice }) {
     const brevoApiKey = process.env.BREVO_API_KEY;
-    if (!brevoApiKey) {
-        console.log('BREVO_API_KEY mangler i miljøvariabler. Mail blev ikke afsendt.');
-        return;
-    }
+    if (!brevoApiKey) return;
 
     const recipientEmail = 'thomaslydholmjob98@gmail.com';
 
     try {
-        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        await fetch('https://api.brevo.com/v3/smtp/email', {
             method: 'POST',
             headers: {
                 'accept': 'application/json',
@@ -146,19 +280,11 @@ async function sendBrevoEmail({ name, email, phone, details, expectedPrice }) {
                 `
             })
         });
-
-        if (!response.ok) {
-            const errBody = await response.text();
-            console.error('Brevo API Fejl:', errBody);
-        } else {
-            console.log('E-mail sendt succesfuldt via Brevo API!');
-        }
     } catch (err) {
         console.error('Kunne ikke sende e-mail via Brevo:', err.message);
     }
 }
 
-// SÆLG DIN SAMLING ENDPOINTS
 const handleSellRequest = async (req, res) => {
     try {
         const { name, email, phone, details, description, expectedPrice, price } = req.body || {};
@@ -172,9 +298,8 @@ const handleSellRequest = async (req, res) => {
 
         sendBrevoEmail({ name, email, phone, details: textDetails, expectedPrice: priceValue });
 
-        res.json({ success: true, message: 'Mange tak! Din henvendelse er modtaget. Vi vender tilbage inden for 24 timer.' });
+        res.json({ success: true, message: 'Mange tak! Din henvendelse er modtaget.' });
     } catch (err) {
-        console.error('Fejl ved oprettelse af salgshenvendelse:', err);
         res.json({ success: true, message: 'Din henvendelse er modtaget!' });
     }
 };
@@ -183,7 +308,6 @@ app.post('/api/sell', handleSellRequest);
 app.post('/api/sell-collection', handleSellRequest);
 app.post('/api/contact/sell', handleSellRequest);
 
-// HENT SALGSHENVENDELSER TIL ADMIN
 app.get('/api/admin/sell-requests', checkAdmin, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM sell_requests ORDER BY created_at DESC');
@@ -193,7 +317,7 @@ app.get('/api/admin/sell-requests', checkAdmin, async (req, res) => {
     }
 });
 
-// AI KORT-VURDERING (OPDATERET TIL FORSIDE OG BAGSIDE)
+// AI KORT-VURDERING
 app.post('/api/ai-grade', async (req, res) => {
     try {
         const { frontImageBase64, backImageBase64, cardName } = req.body || {};
@@ -207,7 +331,7 @@ app.post('/api/ai-grade', async (req, res) => {
         const frontData = frontImageBase64.replace(/^data:image\/\w+;base64,/, '');
 
         const parts = [
-            { text: `Du er en professionel CGC / PSA kort-grader for samlekort (Pokémon / One Piece). Analyser dette kort (${cardName || 'Ukendt kort'}) ud fra de medfølgende billeder (forside og evt. bagside). Vurder de fire underområder: Centering (centrering på forside/bagside), Corners (hjørner), Edges (kanter) og Surface (overflade). Giv en estimeret CGC-karakter samt en konstruktiv, ærlig begrundelse på dansk i et skarpt format med overskrifter. Husk at nævne klart, at vurderingen udelukkende er vejledende.` },
+            { text: `Du er en professionel CGC / PSA kort-grader for samlekort (Pokémon / One Piece). Analyser dette kort (${cardName || 'Ukendt kort'}) ud fra de medfølgende billeder (forside og evt. bagside). Vurder de fire underområder: Centering, Corners, Edges og Surface. Giv en estimeret CGC-karakter samt en konstruktiv, ærlig begrundelse på dansk.` },
             { inline_data: { mime_type: frontMimeType, data: frontData } }
         ];
 
@@ -234,7 +358,6 @@ app.post('/api/ai-grade', async (req, res) => {
 
         res.json({ success: true, evaluation });
     } catch (err) {
-        console.error('AI Grade Fejl:', err);
         res.status(500).json({ error: err.message || 'Kunne ikke gennemføre AI-vurdering.' });
     }
 });
@@ -243,8 +366,7 @@ app.post('/api/ai-grade', async (req, res) => {
 app.get('/api/pool-status', async (req, res) => {
     try {
         const result = await pool.query('SELECT count FROM pool_status WHERE id = 1');
-        const count = result.rows[0] ? result.rows[0].count : 12;
-        res.json({ count });
+        res.json({ count: result.rows[0] ? result.rows[0].count : 12 });
     } catch (e) {
         res.json({ count: 12 });
     }
@@ -253,21 +375,15 @@ app.get('/api/pool-status', async (req, res) => {
 app.post('/api/admin/pool-status', checkAdmin, async (req, res) => {
     const { count } = req.body;
     const numCount = parseInt(count, 10);
-    if (isNaN(numCount)) {
-        return res.status(400).json({ error: 'Ugyldigt antal' });
-    }
+    if (isNaN(numCount)) return res.status(400).json({ error: 'Ugyldigt antal' });
     try {
-        await pool.query(
-            'INSERT INTO pool_status (id, count) VALUES (1, $1) ON CONFLICT (id) DO UPDATE SET count = $1',
-            [numCount]
-        );
+        await pool.query('INSERT INTO pool_status (id, count) VALUES (1, $1) ON CONFLICT (id) DO UPDATE SET count = $1', [numCount]);
         res.json({ success: true, count: numCount });
     } catch (e) {
-        res.status(500).json({ error: 'Kunne ikke opdatere pulje i databasen' });
+        res.status(500).json({ error: 'Kunne ikke opdatere pulje' });
     }
 });
 
-// ADMIN DASHBOARD DATA
 app.get('/api/admin/orders', checkAdmin, async (req, res) => {
     try {
         let orders = { rows: [], rowCount: 0 };
@@ -297,12 +413,7 @@ app.get('/api/admin/orders', checkAdmin, async (req, res) => {
 
         res.json({
             orders: orders.rows,
-            stats: {
-                poolCards,
-                members,
-                paidRevenueDkk,
-                orders: orders.rowCount
-            },
+            stats: { poolCards, members, paidRevenueDkk, orders: orders.rowCount },
             statuses: {
                 'modtaget': 'Ordre Modtaget',
                 'under_behandling': 'Under Behandling',
@@ -328,7 +439,6 @@ app.patch('/api/admin/orders/:id', checkAdmin, async (req, res) => {
     }
 });
 
-// PRODUKT VISNING & OPRETTELSE
 app.get('/api/products', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM products ORDER BY created_at DESC');
@@ -340,9 +450,7 @@ app.get('/api/products', async (req, res) => {
 
 app.post('/api/admin/products', checkAdmin, async (req, res) => {
     const { title, category, priceDkk, imageUrl } = req.body || {};
-    if (!title || !priceDkk) {
-        return res.status(400).json({ error: 'Titel og pris er påkrævet' });
-    }
+    if (!title || !priceDkk) return res.status(400).json({ error: 'Titel og pris er påkrævet' });
     try {
         const numericPrice = parseInt(priceDkk, 10);
         await pool.query(
@@ -351,12 +459,10 @@ app.post('/api/admin/products', checkAdmin, async (req, res) => {
         );
         res.json({ success: true });
     } catch (e) {
-        console.error('Produkt oprettelsesfejl:', e.message);
-        res.status(500).json({ error: 'Kunne ikke oprette produkt i databasen: ' + e.message });
+        res.status(500).json({ error: 'Kunne ikke oprette produkt: ' + e.message });
     }
 });
 
-// ADMIN: OPDATÉR PRODUKT STATUS (FX SOLGT)
 app.patch('/api/admin/products/:id', checkAdmin, async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
@@ -364,29 +470,33 @@ app.patch('/api/admin/products/:id', checkAdmin, async (req, res) => {
         await pool.query('UPDATE products SET status = $1 WHERE id = $2', [status, id]);
         res.json({ success: true });
     } catch (e) {
-        console.error('Fejl ved opdatering af produkt status:', e.message);
-        res.status(500).json({ error: 'Kunne ikke opdatere status: ' + e.message });
+        res.status(500).json({ error: 'Kunne ikke opdatere status' });
     }
 });
 
-// ADMIN: SLET PRODUKT
 app.delete('/api/admin/products/:id', checkAdmin, async (req, res) => {
     const { id } = req.params;
     try {
         await pool.query('DELETE FROM products WHERE id = $1', [id]);
         res.json({ success: true });
     } catch (e) {
-        console.error('Fejl ved sletning af produkt:', e.message);
         res.status(500).json({ error: 'Kunne ikke slette produkt' });
     }
 });
 
-// CHECKOUT
 app.post('/api/checkout', async (req, res) => {
     try {
         const { name, email, phone, address, postal, city, qty, tier, shippingMethod, notes, coupon } = req.body;
         const basePrices = { bulk: 279, economy: 299, standard: 499, express: 899, walkthrough: 2199, unlimited: 2199 };
         let pricePerCard = basePrices[tier] || 279;
+
+        if (req.session.userId) {
+            const userRes = await pool.query('SELECT membership_active FROM users WHERE id = $1', [req.session.userId]);
+            if (userRes.rows[0]?.membership_active) {
+                if (tier === 'bulk') pricePerCard = 249;
+                else pricePerCard = Math.round(pricePerCard * 0.95);
+            }
+        }
 
         let subtotal = qty * pricePerCard;
         let shipPrice = shippingMethod === 'hjemmelevering' ? 69 : 49;
@@ -421,8 +531,34 @@ app.post('/api/checkout', async (req, res) => {
 
         res.json({ url: sessionStripe.url });
     } catch (err) {
-        console.error('Checkout fejl:', err);
         res.status(500).json({ error: 'Kunne ikke oprette betaling.' });
+    }
+});
+
+app.post('/api/membership-checkout', async (req, res) => {
+    try {
+        if (!req.session.userId) return res.status(401).json({ error: 'Du skal være logget ind.' });
+        const { plan } = req.body;
+        const priceDkk = plan === 'yearly' ? 599 : 59;
+
+        const sessionStripe = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [{
+                price_data: {
+                    currency: 'dkk',
+                    product_data: { name: `Poke Bro Medlemskab (${plan === 'yearly' ? 'Årligt' : 'Månedligt'})` },
+                    unit_amount: priceDkk * 100,
+                },
+                quantity: 1,
+            }],
+            mode: 'payment',
+            success_url: `${req.protocol}://${req.get('host')}/account.html?membership=success`,
+            cancel_url: `${req.protocol}://${req.get('host')}/index.html#membership`,
+        });
+
+        res.json({ url: sessionStripe.url });
+    } catch (err) {
+        res.status(500).json({ error: 'Kunne ikke starte medlemskab.' });
     }
 });
 
