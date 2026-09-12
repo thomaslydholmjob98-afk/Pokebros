@@ -166,14 +166,12 @@ app.patch('/api/admin/users/:id', checkAdmin, async (req, res) => {
 app.delete('/api/admin/users/:id', checkAdmin, async (req, res) => {
     const userId = req.params.id;
     try {
-        // Hent brugerens e-mail for at kunne slette relaterede ordrer
         const userRes = await pool.query('SELECT email FROM users WHERE id = $1', [userId]);
         if (userRes.rows.length > 0) {
             const userEmail = userRes.rows[0].email;
             await pool.query('DELETE FROM orders WHERE customer_email = $1', [userEmail]);
         }
 
-        // Slet sessioner og selve brugeren
         await pool.query(`DELETE FROM session WHERE sess::text LIKE $1`, [`%"userId":${userId}%`]);
         await pool.query('DELETE FROM users WHERE id = $1', [userId]);
 
@@ -183,6 +181,66 @@ app.delete('/api/admin/users/:id', checkAdmin, async (req, res) => {
         res.status(500).json({ error: 'Kunne ikke slette bruger: ' + e.message });
     }
 });
+
+// BREVO: FUNKTION TIL AT SENDE VELKOMSTMAIL
+async function sendWelcomeEmail({ name, email }) {
+    const brevoApiKey = process.env.BREVO_API_KEY;
+    if (!brevoApiKey) return;
+
+    const senderEmail = 'thomaslydholmjob98@gmail.com'; // Skift evt. til din officielle afsender-e-mail i Brevo
+
+    try {
+        await fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: {
+                'accept': 'application/json',
+                'api-key': brevoApiKey,
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+                sender: { name: 'The Poke Bros', email: senderEmail },
+                to: [{ email: email, name: name || 'Samler' }],
+                subject: '🔥 Velkommen til The Poke Bros – Din guide til CGC Grading & Samlekort!',
+                htmlContent: `
+                    <div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; color: #333;">
+                        <div style="max-width: 600px; margin: 0 auto; background: #111318; color: #fff; padding: 40px; border-radius: 12px; border: 1px solid #222;">
+                            <h1 style="color: #e63946; margin-top: 0; text-align: center;">Velkommen til The Poke Bros! 🚀</h1>
+                            <p>Hej <b>${name || 'samler'}</b>,</p>
+                            <p>Mange tak for din oprettelse af en konto hos <b>The Poke Bros</b>! Vi er utrolig glade for at byde dig velkommen til vores univers af Pokémon- og One Piece-samlekort.</p>
+                            
+                            <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
+                            
+                            <h3 style="color: #2ec4b6;">Hvad kan du på platformen?</h3>
+                            <ul style="line-height: 1.6; color: #ccc;">
+                                <li><b>Nem CGC Gradering:</b> Få graded dine kort hos CGC uden at skulle samle en stor submission selv. Vi sender fra bare 1 kort!</li>
+                               <li><b>Eksklusive medlemsfordele:</b> Som medlem får du særlige rabatter på dine submissons og eksklusive fordele i shoppen. Brug koden <code style="background: #222; padding: 2px 6px; color: #ff4d5a;">MASTER2026</code> for 10% rabat på din første ordre.</li>
+                                <li><b>Sporing af ordrer:</b> Følg dine kort hele vejen fra modtagelse, til de er sendt til CGC, under gradering, og når de er på vej retur til dig.</li>
+                                <li><b>Sælg din samling:</b> Har du kort, du vil af med? Brug vores "Sælg din samling"-formular, så tager vi en uforpligtende snak.</li>
+                            </ul>
+
+                            <h3 style="color: #2ec4b6; margin-top: 25px;">Sådan kommer du i gang:</h3>
+                            <ol style="line-height: 1.6; color: #ccc;">
+                                <li>Log ind på din <a href="https://www.thepokebros.com/account.html" style="color: #e63946;">Min Konto</a>-side.</li>
+                                <li>Vælg din ønskede grading-tier og opret din ordre.</li>
+                                <li>Udskriv din pakkeseddel og send dine kort forsvarligt til os.</li>
+                            </ol>
+
+                            <p style="margin-top: 30px;">Har du spørgsmål undervejs, er du altid velkommen til at svare direkte på denne e-mail.</p>
+                            
+                            <p style="margin-top: 40px; text-align: center; color: #888; font-size: 13px;">
+                                De bedste hilsner,<br>
+                                <b>The Poke Bros Team</b><br>
+                                <a href="https://www.thepokebros.com" style="color: #e63946; text-decoration: none;">www.thepokebros.com</a>
+                            </p>
+                        </div>
+                    </div>
+                `
+            })
+        });
+    } catch (err) {
+        console.error('Kunne ikke sende velkomstmail via Brevo:', err.message);
+    }
+}
 
 // BRUGER AUTHENTICATION & KONTO DATA
 app.post('/api/auth/register', async (req, res) => {
@@ -201,6 +259,10 @@ app.post('/api/auth/register', async (req, res) => {
 
         const user = result.rows[0];
         req.session.userId = user.id;
+
+        // Send den lange velkomstmail via Brevo i baggrunden
+        sendWelcomeEmail({ name: user.name, email: user.email });
+
         res.json({ success: true, user });
     } catch (err) {
         res.status(500).json({ error: 'Kunne ikke oprette konto.' });
