@@ -16,7 +16,7 @@ const transporter = nodemailer.createTransport({
 async function sendWelcomeEmail(toEmail, userName) {
     try {
         await transporter.sendMail({
-            from: process.env.EMAIL_FROM || 'Poke Bros <noreply@thepokebros.com>',
+            from: process.env.EMAIL_FROM || 'The Poke Bros <thomaslydholmjob98@gmail.com>',
             to: toEmail,
             subject: 'Velkommen til Poke Bros!',
             html: `
@@ -75,21 +75,21 @@ app.post('/api/confirm-payment',async(req,res)=>{try{const stripe=require('strip
 app.post('/api/track',async(req,res)=>{const id=String(req.body?.orderId||'').trim().toUpperCase(),email=String(req.body?.email||'').trim().toLowerCase(),r=await db.query('SELECT order_id FROM orders WHERE order_id=$1 AND customer_email=$2',[id,email]);if(!r.rows[0])return res.status(404).json({error:'Ordren blev ikke fundet.'});res.json(await publicOrder(id))});
 app.get('/api/admin/orders',async(req,res)=>{if(!adminOK(req))return res.status(401).json({error:'Forkert admin-adgangskode.'});const r=await db.query('SELECT * FROM orders ORDER BY created_at DESC'),orders=[];for(const o of r.rows){const p=await publicOrder(o.order_id);orders.push({...o,...p})}const poolCards=r.rows.filter(o=>['cards_received','awaiting_batch'].includes(o.status)).reduce((n,o)=>n+o.qty,0),members=Number((await db.query('SELECT COUNT(*) c FROM users WHERE membership_active=TRUE')).rows[0].c);res.json({orders,statuses:STATUS,stats:{orders:r.rowCount,poolCards,paidRevenueDkk:r.rows.filter(o=>o.payment_status==='paid').reduce((n,o)=>n+o.total_dkk,0),members}})});
 app.patch('/api/admin/orders/:id',async(req,res)=>{if(!adminOK(req))return res.status(401).json({error:'Forkert admin-adgangskode.'});const {status,batch,trackingNumber,note}=req.body||{};if(status&&!STATUS[status])return res.status(400).json({error:'Ukendt status.'});const cur=(await db.query('SELECT * FROM orders WHERE order_id=$1',[req.params.id])).rows[0];if(!cur)return res.status(404).json({error:'Ordren blev ikke fundet.'});if(status&&status!==cur.status){await db.query('UPDATE orders SET status=$1 WHERE order_id=$2',[status,req.params.id]);await timeline(req.params.id,status,note||'')}if(batch!==undefined)await db.query('UPDATE orders SET batch=$1 WHERE order_id=$2',[String(batch||'').trim()||null,req.params.id]);if(trackingNumber!==undefined)await db.query('UPDATE orders SET tracking_number=$1 WHERE order_id=$2',[String(trackingNumber||'').trim()||null,req.params.id]);res.json(await publicOrder(req.params.id))});
-app.get('/api/health',async(req,res)=>{try{await db.query('SELECT 1');res.json({ok:true})}catch{res.status(503).json({ok:false})}});
-app.use((err,req,res,next)=>{console.error(err);res.status(500).json({error:'Der opstod en serverfejl.'})});
-app.listen(PORT,()=>console.log(`The Poke Bros kører på port ${PORT}`));
+
 // Route til "Sælg din samling" formularen
 app.post('/api/sell-collection', authLimiter, async (req, res) => {
     try {
-        const { name, email, phone, description, link } = req.body;
+        const { name, email, phone, description, link } = req.body || {};
 
         if (!name || !email || !description) {
             return res.status(400).json({ error: 'Udfyld venligst navn, e-mail og beskrivelse af samlingen.' });
         }
 
+        console.log(`[Opkøb] Modtaget henvendelse fra: ${name} (${email})`);
+
         // Send mail til dig selv om det nye tilbud
         await transporter.sendMail({
-            from: process.env.EMAIL_FROM || 'Poke Bros <thomaslydholmjob98@gmail.com>',
+            from: process.env.EMAIL_FROM || 'The Poke Bros <thomaslydholmjob98@gmail.com>',
             to: 'thomaslydholmjob98@gmail.com',
             subject: `[Poke Bros Opkøb] Ny samling indsendt af ${name}`,
             html: `
@@ -106,9 +106,15 @@ app.post('/api/sell-collection', authLimiter, async (req, res) => {
             `
         });
 
-        res.json({ ok: true, message: 'Tak for din henvendelse! Vi vender tilbage med et tilbud inden for 24 timer.' });
+        console.log(`[Opkøb] Mail sendt succesfuldt for ${name}`);
+        return res.json({ ok: true, message: 'Tak for din henvendelse! Vi vender tilbage med et tilbud inden for 24 timer.' });
+
     } catch (err) {
         console.error('Fejl ved indsendelse af samling:', err);
-        res.status(500).json({ error: 'Kunne ikke sende din henvendelse. Prøv igen senere.' });
+        return res.status(500).json({ error: 'E-mailen kunne ikke afsendes. Tjek venligst serverloggen.' });
     }
 });
+
+app.get('/api/health',async(req,res)=>{try{await db.query('SELECT 1');res.json({ok:true})}catch{res.status(503).json({ok:false})}});
+app.use((err,req,res,next)=>{console.error(err);res.status(500).json({error:'Der opstod en serverfejl.'})});
+app.listen(PORT,()=>console.log(`The Poke Bros kører på port ${PORT}`));
