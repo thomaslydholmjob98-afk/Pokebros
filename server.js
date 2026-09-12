@@ -83,7 +83,8 @@ app.get('/api/pool-status', async (req, res) => {
 
 app.post('/api/admin/pool-status', async (req, res) => {
     const adminPass = req.headers['x-admin-password'];
-    if (adminPass !== (process.env.ADMIN_PASSWORD || 'admin123')) {
+    const expectedPass = process.env.ADMIN_PASSWORD;
+    if (adminPass !== expectedPass) {
         return res.status(401).json({ error: 'Ugyldig adgangskode' });
     }
     const { count } = req.body;
@@ -168,7 +169,8 @@ app.post('/api/checkout', async (req, res) => {
 // Admin Ordrer Endpoint
 app.get('/api/admin/orders', async (req, res) => {
     const adminPass = req.headers['x-admin-password'];
-    if (adminPass !== (process.env.ADMIN_PASSWORD || 'admin123')) {
+    const expectedPass = process.env.ADMIN_PASSWORD;
+    if (adminPass !== expectedPass) {
         return res.status(401).json({ error: 'Ugyldig adgangskode' });
     }
     try {
