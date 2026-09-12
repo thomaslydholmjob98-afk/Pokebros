@@ -67,7 +67,8 @@
 
         <div class="admin-card">
             <h2>Styr Puljetæller manuelt</h2>
-            <div class="form-inline" style="margin-top: 15px;">
+            <p style="color: #aaa; font-size: 14px; margin-bottom: 15px;">Indtast det antal kort, der skal vises i puljen på forsiden:</p>
+            <div class="form-inline">
                 <input type="number" id="manualPoolInput" placeholder="Fx 18" style="width: 150px;">
                 <button onclick="updatePoolStatus()" class="btn" style="padding: 8px 16px;">Opdatér pulje</button>
             </div>
@@ -155,7 +156,6 @@
             errorEl.textContent = '';
 
             try {
-                // 1. Tjek om adgangskoden er korrekt
                 const loginRes = await fetch('/api/admin/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -173,9 +173,7 @@
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('adminContent').style.display = 'block';
 
-                // 2. Hent dashboard data
                 loadDashboardData();
-                generatePost();
             } catch (err) {
                 errorEl.textContent = err.message;
                 if (err.message === 'Forkert adgangskode') {
@@ -200,6 +198,8 @@
                 document.getElementById('statPool').textContent = (data.stats.poolCards || 0) + ' stk.';
                 document.getElementById('statMembers').textContent = data.stats.members || 0;
 
+                // Opdater pulje-inputfelterne med det aktuelle tal
+                document.getElementById('manualPoolInput').value = data.stats.poolCards || 0;
                 document.getElementById('genPoolCount').value = data.stats.poolCards || 0;
                 generatePost();
 
@@ -239,6 +239,35 @@
             }
         }
 
+        async function updatePoolStatus() {
+            const countInput = document.getElementById('manualPoolInput');
+            const count = countInput.value;
+            if (count === '') {
+                alert('Indtast venligst et antal kort.');
+                return;
+            }
+            try {
+                const res = await fetch('/api/admin/pool-status', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'x-admin-password': adminPass 
+                    },
+                    body: JSON.stringify({ count: Number(count) })
+                });
+                
+                const resData = await res.json();
+                if (!res.ok) {
+                    throw new Error(resData.error || 'Fejl ved opdatering af pulje');
+                }
+                
+                alert('Puljetæller opdateret til ' + count + ' kort!');
+                loadDashboardData();
+            } catch (e) { 
+                alert('Kunne ikke opdatere pulje: ' + e.message); 
+            }
+        }
+
         async function updateOrderStatus(orderId, newStatus) {
             try {
                 const res = await fetch(`/api/admin/orders/${orderId}`, {
@@ -261,21 +290,6 @@
                 if (!res.ok) throw new Error('Fejl');
                 alert('Trackingnummer gemt!');
             } catch (e) { alert('Kunne ikke gemme tracking'); }
-        }
-
-        async function updatePoolStatus() {
-            const count = document.getElementById('manualPoolInput').value;
-            if (count === '') return;
-            try {
-                const res = await fetch('/api/admin/pool-status', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPass },
-                    body: JSON.stringify({ count: Number(count) })
-                });
-                if (!res.ok) throw new Error('Fejl');
-                alert('Pulje opdateret!');
-                loadDashboardData();
-            } catch (e) { alert('Fejl ved opdatering af pulje'); }
         }
 
         async function createProduct(e) {
