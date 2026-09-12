@@ -320,7 +320,7 @@ app.patch('/api/admin/orders/:id', checkAdmin, async (req, res) => {
     }
 });
 
-// PRODUKT VISNING & OPRETTELSE
+// PRODUKT VISNING & OPRETTELSE (Viser den præcise databasefejl ved oprettelse)
 app.get('/api/products', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM products ORDER BY created_at DESC');
@@ -343,8 +343,8 @@ app.post('/api/admin/products', checkAdmin, async (req, res) => {
         );
         res.json({ success: true });
     } catch (e) {
-        console.error('Produkt oprettelsesfejl:', e);
-        res.status(500).json({ error: 'Kunne ikke oprette produkt i databasen' });
+        console.error('Produkt oprettelsesfejl:', e.message);
+        res.status(500).json({ error: 'Kunne ikke oprette produkt i databasen: ' + e.message });
     }
 });
 
