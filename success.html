@@ -1,3 +1,79 @@
-<!doctype html><html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tak for din bestilling | The Poke Bros</title><link rel="stylesheet" href="style.css"></head><body><header><a class="brand" href="/">THE POKE BROS</a></header><main class="section success"><span class="eyebrow">BESTILLING MODTAGET</span><h1>Tak for din bestilling.</h1><p class="lead" id="intro">Vi bekræfter din betaling…</p><div class="price"><div><h3 id="orderNo">Dit ordrenummer</h3><p>Gem ordrenummeret. Skriv det både uden på forsendelsen og på en seddel inde i pakken sammen med dit navn.</p><ol><li>Læg hvert kort i en penny sleeve og egnet semi-rigid/card saver.</li><li>Pak kortene, så de ikke kan bevæge sig eller få tryk-/fugtskader.</li><li>Send med en sporbar forsendelsesmetode, der passer til kortenes værdi.</li><li>Send til: <b>The Poke Bros / Thomas Lydholm, Kastetvej 119 st. tv.</b>. Skriv dit ordrenummer tydeligt på eller i pakken.</li></ol></div><div class="price-side"><strong id="status">Kontrollerer betaling…</strong><a class="btn" href="track.html">Spor din ordre</a><a class="btn ghost" href="account.html">Min konto</a><a class="btn ghost" href="/">Til forsiden</a></div></div></main><script>
-const p=new URLSearchParams(location.search),sid=p.get('session_id'),oid=p.get('order');orderNo.textContent=oid||'Dit ordrenummer';async function confirm(){if(!sid||!oid){intro.textContent='Din bestilling er registreret.';status.textContent='Ordre modtaget';return}try{const r=await fetch('/api/confirm-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:sid,orderId:oid})});const j=await r.json();if(!r.ok)throw new Error();status.textContent=j.paymentStatus==='paid'?'Betaling godkendt':'Betaling registreres';intro.textContent=j.paymentStatus==='paid'?'Din betaling er godkendt. Nu kan du sende kortene til os.':'Vi registrerer din betaling. Du kan følge status med dit ordrenummer.'}catch{intro.textContent='Din ordre er oprettet. Betalingsstatus opdateres automatisk.';status.textContent='Ordre modtaget'}}confirm();
-</script><div style="text-align:center;padding:24px;font-size:13px;opacity:.75"><a href="/handelsbetingelser.html">Handelsbetingelser</a> · <a href="/privatliv.html">Privatlivspolitik</a></div></body></html>
+<!doctype html>
+<html lang="da">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Ordre gennemført | The Poke Bros</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .success-container { max-width: 600px; margin: 60px auto; padding: 40px; background: #111318; border: 1px solid #222; border-radius: 12px; text-align: center; color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .success-container h2 { color: #e63946; margin-top: 0; font-size: 28px; }
+        .success-container p { color: #aaa; font-size: 15px; line-height: 1.6; }
+        .order-box { background: #1a1e29; padding: 20px; border-radius: 8px; margin: 25px 0; border: 1px solid #333; }
+        .order-box b { color: #fff; font-size: 18px; }
+        .alert-box { background: #2c1a1a; border: 2px dashed #e63946; padding: 15px; border-radius: 8px; margin: 25px 0; text-align: left; }
+        .alert-box h4 { color: #ff4d5a; margin: 0 0 8px 0; font-size: 15px; }
+        .alert-box p { color: #ddd; margin: 0; font-size: 13px; }
+        .btn-slip { display: inline-block; background: #e63946; color: #fff; padding: 14px 28px; font-weight: bold; text-decoration: none; border-radius: 6px; margin-top: 15px; transition: background 0.2s; }
+        .btn-slip:hover { background: #d90429; }
+        .btn-home { display: inline-block; background: transparent; color: #aaa; padding: 10px 20px; text-decoration: none; font-size: 14px; margin-top: 15px; }
+        .btn-home:hover { color: #fff; }
+    </style>
+</head>
+<body>
+    <header>
+        <a class="brand" href="index.html">THE POKE BROS</a>
+    </header>
+
+    <main class="success-container">
+        <h2>🎉 Tak for din bestilling!</h2>
+        <p>Din betaling er gennemført, og din ordre er nu oprettet i systemet. Vi har sendt en ordrebekræftelse til din e-mail.</p>
+        
+        <div class="order-box">
+            <span style="font-size: 13px; color: #888; display: block; margin-bottom: 5px;">ORDRENUMMER</span>
+            <b id="orderIdDisplay">Indlæser...</b>
+        </div>
+
+        <div class="alert-box">
+            <h4>⚠️ VIGTIGT INDEN DU SENDER KORTENE:</h4>
+            <p>Du <strong>skal</strong> udskrive den officielle pakkeseddel og lægge den med ind i kassen sammen med dine kort. Det sikrer, at vi kan matche din forsendelse lynhurtigt, så snart den lander hos os!</p>
+        </div>
+
+        <a id="slipLink" href="#" class="btn-slip" target="_blank">📄 Hent & Udskriv Pakkeseddel (SKAL I KASSEN)</a>
+        
+        <div style="margin-top: 20px;">
+            <a href="index.html" class="btn-home">← Tilbage til forsiden</a>
+        </div>
+    </main>
+
+    <script>
+        async function verifyAndLoad() {
+            const params = new URLSearchParams(location.search);
+            const sessionId = params.get('session_id');
+            const orderId = params.get('order');
+
+            if (!orderId) {
+                document.getElementById('orderIdDisplay').textContent = 'Ukendt ordre';
+                return;
+            }
+
+            document.getElementById('orderIdDisplay').textContent = orderId;
+            document.getElementById('slipLink').href = 'packingslip.html?order=' + orderId;
+
+            // Bekræft betalingen bag kulisserne hvis session_id findes
+            if (sessionId) {
+                try {
+                    await fetch('/api/confirm-payment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sessionId, orderId })
+                    });
+                } catch (e) {
+                    console.error('Kunne ikke bekræfte betaling automatisk via webhook-backup.');
+                }
+            }
+        }
+        verifyAndLoad();
+    </script>
+</body>
+</html>
