@@ -7,13 +7,15 @@
     <link rel="stylesheet" href="style.css">
     <style>
         .admin-container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
-        .admin-box { background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 30px; }
+        .admin-box { background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 30px; color: #333; }
+        .admin-box h2 { color: #1a1a1a; margin-top: 0; }
         .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; }
-        .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        .order-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        .order-table th, .order-table td { padding: 10px; border: 1px solid #eee; text-align: left; font-size: 14px; }
-        .order-table th { background: #f8f9fa; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 5px; color: #333; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; background: #fff; color: #1a1a1a; font-size: 14px; }
+        .order-table { width: 100%; border-collapse: collapse; margin-top: 15px; background: #fff; color: #333; }
+        .order-table th, .order-table td { padding: 10px; border: 1px solid #ddd; text-align: left; font-size: 14px; color: #333; }
+        .order-table th { background: #f8f9fa; font-weight: bold; }
+        #statsBox { color: #333; margin-bottom: 15px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -43,8 +45,8 @@
                         <label>Titel på kort / vare</label>
                         <input type="text" name="title" placeholder="fx Charizard Base Set Shadowless CGC 9" required>
                     </div>
-                    <div style="display:flex; gap:15px;">
-                        <div class="form-group" style="flex:1;">
+                    <div style="display:flex; gap:15px; flex-wrap:wrap;">
+                        <div class="form-group" style="flex:1; min-width:200px;">
                             <label>Kategori</label>
                             <select name="category" required>
                                 <option value="slab">CGC Slab</option>
@@ -52,7 +54,7 @@
                                 <option value="sealed">Sealed / Tilbehør</option>
                             </select>
                         </div>
-                        <div class="form-group" style="flex:1;">
+                        <div class="form-group" style="flex:1; min-width:200px;">
                             <label>Pris (DKK)</label>
                             <input type="number" name="priceDkk" placeholder="fx 1250" required>
                         </div>
@@ -69,7 +71,7 @@
             <!-- Ordreoversigt -->
             <div class="admin-box">
                 <h2>Grading Ordreoversigt</h2>
-                <div id="statsBox" style="margin-bottom:15px; font-weight:bold;"></div>
+                <div id="statsBox"></div>
                 <div style="overflow-x:auto;">
                     <table class="order-table">
                         <thead>
@@ -126,9 +128,9 @@
                 <td>${o.customer_name}<br><small>${o.customer_email}</small></td>
                 <td>${o.qty} stk.</td>
                 <td>${o.tier}</td>
-                <td><span style="background:#e0e0e0; padding:3px 6px; border-radius:4px; font-size:12px;">${o.statusLabel}</span></td>
+                <td><span style="background:#e0e0e0; padding:3px 6px; border-radius:4px; font-size:12px; color:#333;">${o.statusLabel}</span></td>
                 <td>
-                    <select onchange="updateStatus('${o.orderId}', this.value)">
+                    <select onchange="updateStatus('${o.orderId}', this.value)" style="padding:5px;">
                         <option value="">Skift status...</option>
                         ${Object.entries(data.statuses).map(([k,v]) => `<option value="${k}">${v}</option>`).join('')}
                     </select>
@@ -155,7 +157,6 @@
         }
     }
 
-    // Opret produkt submit handler
     document.getElementById('addProductForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const msg = document.getElementById('productMsg');
