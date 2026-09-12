@@ -1,6 +1,111 @@
-<!doctype html><html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Min konto | The Poke Bros</title><link rel="stylesheet" href="style.css"></head><body><header><a class="brand" href="/">THE POKE BROS</a><nav><a href="/#order">Bestil grading</a><a href="track.html">Spor ordre</a></nav><button class="btn small ghost" id="logout">Log ud</button></header><main class="account-shell"><section id="loading" class="auth-card"><span class="eyebrow">MIN KONTO</span><h1>Henter din konto…</h1></section><section id="account" hidden><div class="account-head"><div><span class="eyebrow">MIN POKE BRO-KONTO</span><h1 id="hello">Hej</h1><p class="lead" id="email"></p></div><a class="btn" href="/#order">Bestil grading</a></div><div class="member-status" id="memberBox"></div><div class="account-grid"><article><span>Aktive ordrer</span><strong id="activeCount">0</strong></article><article><span>Samlede ordrer</span><strong id="orderCount">0</strong></article><article><span>Bulk-pris</span><strong id="bulkPrice">279 kr.</strong></article></div><section class="account-orders"><div class="section-title"><div><span class="eyebrow">DINE KORT</span><h2>Ordrehistorik og tracking</h2></div></div><div id="orders" class="order-list"></div></section></section></main><script>
-const fmt=d=>new Date(d).toLocaleDateString('da-DK',{day:'2-digit',month:'short',year:'numeric'});
-function orderCard(o){const steps=(o.timeline||[]).slice().reverse().slice(0,3).map(t=>`<div class="mini-step"><b>${t.label}</b><span>${fmt(t.at)}</span>${t.note?`<small>${t.note}</small>`:''}</div>`).join('');return `<article class="account-order"><div class="order-top"><div><small>${fmt(o.createdAt)}</small><h3>${o.orderId}</h3><span>${o.qty} kort • ${(o.tier||'bulk').toUpperCase()}</span></div><div class="status-big">${o.statusLabel}</div></div><div class="track-meta"><span>I alt <b>${Number(o.totalDkk).toLocaleString('da-DK')} kr.</b></span>${o.batch?`<span>CGC-pulje <b>${o.batch}</b></span>`:''}${o.trackingNumber?`<span>Tracking <b>${o.trackingNumber}</b></span>`:''}</div><div class="timeline-mini">${steps||'<p>Ingen statusopdateringer endnu.</p>'}</div></article>`}
-async function load(){try{const p=new URLSearchParams(location.search);if(p.get('membership')==='success'&&p.get('session_id'))await fetch('/api/confirm-membership',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:p.get('session_id')})});const r=await fetch('/api/account'),j=await r.json();if(r.status===401){location.href='/login.html';return}if(!r.ok)throw new Error(j.error||'Kunne ikke hente konto');loading.hidden=true;account.hidden=false;hello.textContent=`Hej ${j.user.name.split(' ')[0]}`;email.textContent=j.user.email;const active=j.orders.filter(o=>!['completed','shipped'].includes(o.status)).length;activeCount.textContent=active;orderCount.textContent=j.orders.length;bulkPrice.textContent=j.pricing.bulk.toLocaleString('da-DK')+' kr.';memberBox.innerHTML=j.user.membership?.active?`<div><span class="member-badge">POKE BRO MEMBER</span><h2>Dit medlemskab er aktivt</h2><p>Du får Bulk til <b>249 kr. pr. kort</b> og 5 % medlemsrabat på øvrige faste tiers.</p></div><a class="btn ghost" href="/#order">Brug medlemspris</a>`:`<div><span class="eyebrow">MEDLEMSKAB</span><h2>Du er ikke Poke Bro-medlem endnu</h2><p>Få Bulk til 249 kr. pr. kort og medlemsfordele.</p></div><a class="btn" href="/#membership">Bliv en Poke Bro</a>`;orders.innerHTML=j.orders.length?j.orders.map(orderCard).join(''):'<div class="empty-state"><h3>Ingen ordrer endnu</h3><p>Når du bestiller grading, dukker dine kort og status op her.</p><a class="btn" href="/#order">Bestil første grading</a></div>';}catch(e){loading.innerHTML=`<h1>Kunne ikke hente kontoen</h1><p>${e.message}</p>`}}
-logout.onclick=async()=>{await fetch('/api/auth/logout',{method:'POST'});location.href='/'};load();
-</script><div style="text-align:center;padding:24px;font-size:13px;opacity:.75"><a href="/handelsbetingelser.html">Handelsbetingelser</a> · <a href="/privatliv.html">Privatlivspolitik</a></div></body></html>
+<!doctype html>
+<html lang="da">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Min Konto | The Poke Bros</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .account-container { max-width: 900px; margin: 40px auto; padding: 0 20px; color: #fff; }
+        .account-card { background: #111318; border: 1px solid #222; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .account-card h2 { color: #e63946; margin-top: 0; }
+        .order-row { background: #1a1e29; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .order-info b { color: #fff; font-size: 16px; }
+        .order-info p { color: #aaa; margin: 5px 0 0 0; font-size: 14px; }
+        .badge { background: #222633; color: #ff4d5a; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .btn-slip-small { display: inline-block; background: #e63946; color: #fff; padding: 8px 14px; font-size: 13px; font-weight: bold; text-decoration: none; border-radius: 4px; transition: background 0.2s; }
+        .btn-slip-small:hover { background: #d90429; }
+        .logout-btn { background: transparent; border: 1px solid #e63946; color: #e63946; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .logout-btn:hover { background: #e63946; color: #fff; }
+    </style>
+</head>
+<body>
+    <header>
+        <a class="brand" href="index.html">THE POKE BROS</a>
+        <nav>
+            <a href="index.html">Forsiden</a>
+            <a href="shop.html">Shop</a>
+            <a href="track.html">Spor ordre</a>
+        </nav>
+    </header>
+
+    <main class="account-container">
+        <!-- Brugerprofil Sektion -->
+        <div class="account-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                <div>
+                    <h2 id="userName">Indlæserprofil...</h2>
+                    <p id="userEmail" style="color: #aaa; margin: 0;"></p>
+                </div>
+                <button class="logout-btn" onclick="logout()">Log ud</button>
+            </div>
+            <div id="membershipStatus" style="margin-top: 20px; padding: 15px; background: #1a1e29; border-radius: 8px; border: 1px solid #333;">
+                <b>Medlemskab:</b> <span id="memberDesc">Indlæser medlemsstatus...</span>
+            </div>
+        </div>
+
+        <!-- Ordrer & Pakkesedler Sektion -->
+        <div class="account-card">
+            <h2>Dine Ordrer & Pakkesedler</h2>
+            <p style="color: #aaa; font-size: 14px;">Her kan du se dine tidligere ordrer og hente din pakkeseddel, som <strong>skal udskrives og lægges med i kassen</strong> sammen med dine kort.</p>
+            <div id="ordersList" style="margin-top: 20px;">
+                <p style="color: #666;">Indlæser ordrer...</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        async function loadAccountData() {
+            try {
+                const res = await fetch('/api/account');
+                if (!res.ok) {
+                    // Hvis ikke logget ind, send til login-siden
+                    window.location.href = 'login.html';
+                    return;
+                }
+                const data = await res.json();
+                
+                // Vis profil-info
+                document.getElementById('userName').textContent = data.user.name;
+                document.getElementById('userEmail').textContent = data.user.email;
+                
+                const memberDesc = data.user.membership.active 
+                    ? `Aktiv (${data.user.membership.plan === 'yearly' ? 'Årskort' : 'Månedskort'}) - Du har fordelagtige medlemspriser!`
+                    : 'Ingen aktivt medlemskab. (Tilmeld dig på forsiden for at få rabat på Bulk-grading).';
+                document.getElementById('memberDesc').textContent = memberDesc;
+
+                // Vis ordrer
+                const list = document.getElementById('ordersList');
+                if (!data.orders || data.orders.length === 0) {
+                    list.innerHTML = '<p style="color: #888;">Du har endnu ikke oprettet nogen ordrer.</p>';
+                    return;
+                }
+
+                list.innerHTML = data.orders.map(o => `
+                    <div class="order-row">
+                        <div class="order-info">
+                            <b>Ordre: ${o.orderId}</b>
+                            <p>Dato: ${new Date(o.createdAt).toLocaleDateString('da-DK')} • Antal: ${o.qty} stk. (${o.tier.toUpperCase()})</p>
+                            <p><span class="badge">${o.statusLabel}</span> • Total: ${o.totalDkk} kr.</p>
+                        </div>
+                        <div>
+                            <a href="packingslip.html?order=${o.orderId}" class="btn-slip-small" target="_blank">📄 Udskriv Pakkeseddel</a>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (err) {
+                console.error(err);
+                window.location.href = 'login.html';
+            }
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout', { method: 'POST' });
+            window.location.href = 'index.html';
+        }
+
+        loadAccountData();
+    </script>
+</body>
+</html>
