@@ -83,7 +83,7 @@
                 </div>
                 <div>
                     <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Kategori</label>
-                    <input type="text" name="category" placeholder="Fx Slabs / Kort" required style="width: 140px;">
+                    <input type="text" name="category" placeholder="Fx Slabs / Kort" style="width: 140px;">
                 </div>
                 <div>
                     <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Pris (DKK)</label>
@@ -198,7 +198,6 @@
                 document.getElementById('statPool').textContent = (data.stats.poolCards || 0) + ' stk.';
                 document.getElementById('statMembers').textContent = data.stats.members || 0;
 
-                // Opdater pulje-inputfelterne med det aktuelle tal
                 document.getElementById('manualPoolInput').value = data.stats.poolCards || 0;
                 document.getElementById('genPoolCount').value = data.stats.poolCards || 0;
                 generatePost();
@@ -268,6 +267,30 @@
             }
         }
 
+        async function createProduct(e) {
+            e.preventDefault();
+            const form = e.target;
+            const data = Object.fromEntries(new FormData(form));
+            try {
+                const res = await fetch('/api/admin/products', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'x-admin-password': adminPass 
+                    },
+                    body: JSON.stringify(data)
+                });
+                const resData = await res.json();
+                if (!res.ok) {
+                    throw new Error(resData.error || 'Fejl ved oprettelse af produkt');
+                }
+                alert('Produkt oprettet succesfuldt!');
+                form.reset();
+            } catch (e) { 
+                alert('Kunne ikke oprette produkt: ' + e.message); 
+            }
+        }
+
         async function updateOrderStatus(orderId, newStatus) {
             try {
                 const res = await fetch(`/api/admin/orders/${orderId}`, {
@@ -290,22 +313,6 @@
                 if (!res.ok) throw new Error('Fejl');
                 alert('Trackingnummer gemt!');
             } catch (e) { alert('Kunne ikke gemme tracking'); }
-        }
-
-        async function createProduct(e) {
-            e.preventDefault();
-            const form = e.target;
-            const data = Object.fromEntries(new FormData(form));
-            try {
-                const res = await fetch('/api/admin/products', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPass },
-                    body: JSON.stringify(data)
-                });
-                if (!res.ok) throw new Error('Fejl');
-                alert('Produkt oprettet!');
-                form.reset();
-            } catch (e) { alert('Kunne ikke oprette produkt'); }
         }
 
         function generatePost() {
