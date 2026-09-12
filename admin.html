@@ -306,7 +306,7 @@
                                     ${u.membership_active ? 'Deaktivér' : 'Aktivér'}
                                 </button>
                                 <button type="button" onclick="updateUserPlan(${u.id})" class="btn small" style="background: #3a86ff; padding: 5px 8px; font-size: 11px; color: #fff; cursor: pointer;">Opdatér</button>
-                                <button type="button" onclick="deleteUser(${u.id})" class="btn ghost small" style="color: #ff4d5a; border-color: #ff4d5a; padding: 5px 8px; font-size: 11px; cursor: pointer;">Slet</button>
+                                <button type="button" onclick="window.deleteUserRecord(${u.id})" class="btn ghost small" style="color: #ff4d5a; border-color: #ff4d5a; padding: 5px 8px; font-size: 11px; cursor: pointer;">Slet</button>
                             </div>
                         </td>
                     </tr>
@@ -359,7 +359,8 @@
             }
         }
 
-        async function deleteUser(userId) {
+        // Global funktion til sletning, som tvinges direkte igennem fra knappen
+        window.deleteUserRecord = async function(userId) {
             if (!confirm('Er du sikker på, at du vil slette denne bruger og alt dens tilhørende data permanent?')) return;
 
             try {
@@ -367,16 +368,19 @@
                     method: 'DELETE',
                     headers: { 'x-admin-password': adminPass }
                 });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Kunne ikke slette bruger');
+                
+                if (!res.ok) {
+                    const errData = await res.json().catch(() => ({}));
+                    throw new Error(errData.error || 'Kunne ikke slette bruger');
+                }
                 
                 alert('Brugeren og alt tilhørende data er slettet.');
                 loadAdminUsers();
                 loadDashboardData();
             } catch (err) {
-                alert(err.message);
+                alert('Fejl ved sletning: ' + err.message);
             }
-        }
+        };
 
         function handleProductImageSelect(event) {
             const file = event.target.files[0];
