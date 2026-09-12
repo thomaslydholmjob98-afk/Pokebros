@@ -27,6 +27,16 @@ app.use(session({
 // Statiske filer
 app.use(express.static(__dirname));
 
+// Sikkerhedstjek for admin adgangskode ('Lydholm9320')
+function checkAdmin(req, res, next) {
+    const adminPass = req.headers['x-admin-password'];
+    const expectedPass = process.env.ADMIN_PASSWORD || 'Lydholm9320';
+    if (adminPass !== expectedPass && adminPass !== 'Lydholm9320') {
+        return res.status(401).json({ error: 'Ugyldig adgangskode' });
+    }
+    next();
+}
+
 // -------------------------------------------------------------
 // AI KORT-VURDERING (PRE-GRADE)
 // -------------------------------------------------------------
@@ -81,13 +91,7 @@ app.get('/api/pool-status', async (req, res) => {
     }
 });
 
-app.post('/api/admin/pool-status', async (req, res) => {
-    const adminPass = req.headers['x-admin-password'];
-    // Accepter enten miljøvariablen eller din faste kode Lydholm9320 direkte
-    const expectedPass = process.env.ADMIN_PASSWORD || 'Lydholm9320';
-    if (adminPass !== expectedPass && adminPass !== 'Lydholm9320') {
-        return res.status(401).json({ error: 'Ugyldig adgangskode' });
-    }
+app.post('/api/admin/pool-status', checkAdmin, async (req, res) => {
     const { count } = req.body;
     try {
         await pool.query('INSERT INTO pool_status (id, count) VALUES (1, $1) ON CONFLICT (id) DO UPDATE SET count = $1', [count]);
@@ -98,16 +102,62 @@ app.post('/api/admin/pool-status', async (req, res) => {
 });
 
 // -------------------------------------------------------------
-// AUTH API (Bruger login & session)
+// ADMIN ORDRER & PRODUKTER API
 // -------------------------------------------------------------
-app.get('/api/auth/me', async (req, res) => {
-    if (!req.session.userId) return res.json({ loggedIn: false });
+app.get('/api/admin/orders', checkAdmin, async (req, res) => {
     try {
-        const userRes = await pool.query('SELECT id, name, email, phone, membership_active FROM users WHERE id = $1', [req.session.userId]);
-        if (!userRes.rows[0]) return res.json({ loggedIn: false });
-        res.json({ loggedIn: true, user: { ...userRes.rows[0], membership: { active: userRes.rows[0].membership_active } } });
+        const orders = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
+        const poolRes = await pool.query('SELECT count FROM pool_status WHERE id = 1');
+        const membersRes = await pool.query('SELECT COUNT(*) FROM users WHERE membership_active = true');
+        const revenueRes = await pool.query("SELECT SUM(total_dkk) FROM orders WHERE payment_status = 'paid'");
+
+        res.json({
+            orders: orders.rows,
+            stats: {
+                poolCards: poolRes.rows[0]?.count || 0,
+                members: membersRes.rows[0]?.count || 0,
+                paidRevenueDkk: revenueRes.rows[0]?.sum || 0,
+                orders: orders.rowCount
+            },
+            statuses: {
+                'modtaget': 'Ordre Modtaget',
+                'under_behandling': 'Under Behandling',
+                'sendt_cgc': 'Sendt til CGC',
+                'hos_cgc': 'Hos CGC (Gradering)',
+                'retur': 'Pakket & Retur til Kunde'
+            }
+        });
     } catch (e) {
-        res.json({ loggedIn: false });
+        res.status(500).json({ error: 'Databasefejl' });
+    }
+});
+
+app.patch('/api/admin/orders/:id', checkAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { status, trackingNumber } = req.body;
+    try {
+        if (status) {
+            await pool.query('UPDATE orders SET status = $1 WHERE order_id = $2', [status, id]);
+        }
+        if (trackingNumber !== undefined) {
+            await pool.query('UPDATE orders SET tracking_number = $1 WHERE order_id = $2', [trackingNumber, id]);
+        }
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: 'Kunne ikke opdatere ordre' });
+    }
+});
+
+app.post('/api/admin/products', checkAdmin, async (req, res) => {
+    const { title, category, priceDkk, imageUrl } = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO products (title, category, price_dkk, image_url) VALUES ($1, $2, $3, $4)',
+            [title, category, priceDkk, imageUrl]
+        );
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: 'Kunne ikke oprette produkt' });
     }
 });
 
@@ -164,41 +214,6 @@ app.post('/api/checkout', async (req, res) => {
     } catch (err) {
         console.error('Checkout fejl:', err);
         res.status(500).json({ error: 'Kunne ikke oprette betaling.' });
-    }
-});
-
-// Admin Ordrer Endpoint
-app.get('/api/admin/orders', async (req, res) => {
-    const adminPass = req.headers['x-admin-password'];
-    // Accepter enten miljøvariablen eller din faste kode Lydholm9320 direkte
-    const expectedPass = process.env.ADMIN_PASSWORD || 'Lydholm9320';
-    if (adminPass !== expectedPass && adminPass !== 'Lydholm9320') {
-        return res.status(401).json({ error: 'Ugyldig adgangskode' });
-    }
-    try {
-        const orders = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
-        const poolRes = await pool.query('SELECT count FROM pool_status WHERE id = 1');
-        const membersRes = await pool.query('SELECT COUNT(*) FROM users WHERE membership_active = true');
-        const revenueRes = await pool.query("SELECT SUM(total_dkk) FROM orders WHERE payment_status = 'paid'");
-
-        res.json({
-            orders: orders.rows,
-            stats: {
-                poolCards: poolRes.rows[0]?.count || 0,
-                members: membersRes.rows[0]?.count || 0,
-                paidRevenueDkk: revenueRes.rows[0]?.sum || 0,
-                orders: orders.rowCount
-            },
-            statuses: {
-                'modtaget': 'Ordre Modtaget',
-                'under_behandling': 'Under Behandling',
-                'sendt_cgc': 'Sendt til CGC',
-                'hos_cgc': 'Hos CGC (Gradering)',
-                'retur': 'Pakket & Retur til Kunde'
-            }
-        });
-    } catch (e) {
-        res.status(500).json({ error: 'Databasefejl' });
     }
 });
 
