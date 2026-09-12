@@ -46,21 +46,24 @@
 <div class="tier"><h3>Standard</h3><b>499 kr. / kort</b><p>CGC: $49,50 • maks. deklareret værdi $3.000 pr. kort.</p></div>
 <div class="tier"><h3>Express</h3><b>899 kr. / kort</b><p>CGC: $90,00 • maks. deklareret værdi $10.000 pr. kort.</p></div>
 <div class="tier"><h3>WalkThrough</h3><b>2.199 kr. / kort</b><p>CGC: $270,00 • maks. deklareret værdi $100.000 pr. kort.</p></div>
-<div class="tier"><h3>Unlimited Value</h3><b>Fra 2.199 kr. / kort</b><p>CGC: $270 + 0,9 % af FMV. Den variable CGC-afgift viderefaktureres efter kortets Fair Market Value.</p></div>
+<div class="tier"><h3>Unlimited Value</h3><b>Fra 2.199 kr. / kort</b><p>CGC: $270 + 0,9 % af FMV. Den variable afgift viderefaktureres efter kortets Fair Market Value.</p></div>
 </div><p class="fineprint">Priserne er beregnet ud fra CGC-priserne, du har oplyst. Hvis CGC ændrer priser, valutakurs, declared value eller opgraderer et kort til en anden tier, kan en efterregulering være nødvendig. Forsendelser håndteres med forsikring efter de valgte transportvilkår.</p></section>
 <section id="membership" class="section membership"><span class="eyebrow">MEDLEMSKAB</span><h2>Bliv en Poke Bro</h2><p class="lead">Til dig der grader løbende. Som medlem får du en lavere Bulk-pris og ekstra medlemsfordele.</p><div class="member-card"><div><span class="member-badge">POKE BRO MEMBER</span><h3>59 kr. / måned</h3><p class="annual">eller 599 kr. / år</p><ul><li><b>Bulk til 249 kr. pr. kort</b> – spar 30 kr. pr. kort</li><li>5 % medlemsrabat på øvrige faste CGC-tiers</li><li>Mulighed for at samle egne returordrer, hvor det kan lade sig gøre</li><li>Adgang til kommende medlemstilbud og fordele</li></ul><p class="fineprint">Medlemskabet fortsætter, indtil det opsiges. Medlemspris gælder kun, mens medlemskabet er aktivt. CGC-gebyrer, FMV-tillæg og særlige omkostninger kan fortsat medføre efterregulering.</p></div><div class="member-actions"><strong>Vælg medlemskab</strong><button class="btn member-pay" data-plan="monthly">59 kr./md.</button><button class="btn ghost member-pay" data-plan="yearly">599 kr./år</button><small id="memberMsg"></small></div></div></section>
 
 <section id="order" class="section"><span class="eyebrow">BESTIL GRADING</span><h2>Bestil fra bare 1 kort</h2><p class="lead">Vælg CGC-service og antal kort. Systemet beregner prisen automatisk.</p><div class="checkout-grid"><div class="calculator"><label for="tier">CGC-service</label><select id="tier"><option value="bulk">Bulk – 279 kr.</option><option value="economy">Economy – 299 kr.</option><option value="standard">Standard – 499 kr.</option><option value="express">Express – 899 kr.</option><option value="walkthrough">WalkThrough – 2.199 kr.</option><option value="unlimited">Unlimited Value – fra 2.199 kr.</option></select><label for="qty">Antal kort</label><div class="qtyrow"><button type="button" id="minus">−</button><input id="qty" type="number" min="1" max="100" value="1"><button type="button" id="plus">+</button></div><div class="total"><span>Grading & service</span><strong id="gradingTotal">279 kr.</strong></div><div class="total"><span>Forsikret returfragt i Danmark</span><strong>69 kr.</strong></div><div class="total grand"><span>I alt</span><strong id="total">348 kr.</strong></div><small id="tierNote">Bulk: maks. deklareret værdi $500 pr. kort. Du betaler selv forsendelsen af kortene til The Poke Bros.</small></div>
 <form id="checkoutForm" class="order-form">
+    <div id="loginWarning" style="background: #2c1a1a; border: 1px solid #e63946; padding: 12px; border-radius: 6px; margin-bottom: 15px; display: none; text-align: center;">
+        <p style="margin: 0; font-size: 14px; color: #ff4d5a;">Du skal være <a href="login.html" style="color: #fff; text-decoration: underline;">logget ind</a> for at bestille.</p>
+    </div>
     <label>Navn<input name="name" required autocomplete="name"></label>
-    <label>E-mail<input name="email" type="email" required autocomplete="email"></label>
+    <label>E-mail (tilknyttet konto)<input name="email" type="email" id="userEmailInput" readonly style="background: #1a1a1a; color: #888;" placeholder="Log ind for at se e-mail"></label>
     <label>Telefon<input name="phone" type="tel" autocomplete="tel"></label>
     <label>Adresse<input name="address" required autocomplete="street-address"></label>
     <div class="form-row"><label>Postnr.<input name="postal" required inputmode="numeric" autocomplete="postal-code"></label><label>By<input name="city" required autocomplete="address-level2"></label></div>
     <label>Rabatkode <input name="coupon" placeholder="Fx MASTER2026"></label>
     <label>Bemærkning<textarea name="notes" rows="2" placeholder="Fx kortets deklarerede værdi eller særlige oplysninger"></textarea></label>
     <label class="consent"><input type="checkbox" required> <span>Jeg accepterer handelsbetingelserne og forstår, at behandlingstid og afsendelse afhænger af den valgte CGC-service og den samlede submission.</span></label>
-    <button class="btn pay" type="submit">Gå til sikker betaling</button>
+    <button class="btn pay" type="submit" id="submitOrderBtn">Gå til sikker betaling</button>
     <p id="payMsg" class="fineprint"></p>
 </form></div></section>
 
@@ -79,7 +82,7 @@
 <!-- Besked-boks -->
 <div id="masterBallModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #111318; color: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 10000; text-align: center; max-width: 400px; width: 90%; border: 3px solid #7b2cbf;">
     <h2 style="color: #9d4edd; margin-top: 0;">⚡ MASTER BALL AKTIVERET! ⚡</h2>
-    <p style="font-size: 15px;">Du fandt det nørdede påskeæg! Log ind på din konto for at bruge koden <strong>MASTER2026</strong> til at få 10% rabat på din allerførste ordre (kan kun bruges én gang).</p>
+    <p style="font-size: 15px;">Du fandt det nørdede påskeæg! Brug koden <strong>MASTER2026</strong> på din første ordre for at få 10% rabat (kræver login).</p>
     <code style="background: #222633; padding: 6px 12px; font-size: 18px; font-weight: bold; color: #9d4edd; border-radius: 4px; display: inline-block; margin: 10px 0; border: 1px solid #7b2cbf;">MASTER2026</code><br>
     <button onclick="closeMasterBallModal()" class="btn" style="background: #7b2cbf; color: #fff; margin-top: 10px;">Tak, lad mig fange dem alle!</button>
 </div>
@@ -122,8 +125,62 @@ const notes={bulk:'Bulk: maks. deklareret værdi $500 pr. kort.',economy:'Econom
 const q=document.getElementById('qty'),tier=document.getElementById('tier'),t=document.getElementById('total'),g=document.getElementById('gradingTotal'),note=document.getElementById('tierNote');
 function calc(){let n=Math.max(1,Math.min(100,parseInt(q.value)||1));q.value=n;let p=prices[tier.value];g.textContent=(n*p).toLocaleString('da-DK')+' kr.';t.textContent=(n*p+69).toLocaleString('da-DK')+' kr.';note.textContent=notes[tier.value]+' Du betaler selv forsendelsen af kortene til The Poke Bros.'+(me?.membership?.active?' Aktiv Poke Bro-medlemspris er anvendt.':'')}
 document.getElementById('minus').onclick=()=>{q.value=Math.max(1,+q.value-1);calc()};document.getElementById('plus').onclick=()=>{q.value=Math.min(100,+q.value+1);calc()};q.oninput=calc;tier.onchange=calc;
-async function loadAccount(){try{const j=await fetch('/api/auth/me').then(r=>r.json());if(j.loggedIn){me=j.user;accountLink.textContent='Min konto';const form=document.getElementById('checkoutForm');form.elements.name.value=me.name||'';form.elements.email.value=me.email||'';form.elements.phone.value=me.phone||'';if(me.membership?.active){prices={bulk:249,economy:Math.round(299*.95),standard:Math.round(499*.95),express:Math.round(899*.95),walkthrough:Math.round(2199*.95),unlimited:Math.round(2199*.95)};document.querySelector('#membership .lead').textContent='Du er aktiv Poke Bro. Din medlemspris anvendes automatisk, når du bestiller med din konto.';}}else{accountLink.textContent='Log ind';accountLink.href='login.html'}calc()}catch{calc()}}
+
+async function loadAccount(){
+    try{
+        const j=await fetch('/api/auth/me').then(r=>r.json());
+        if(j.loggedIn){
+            me=j.user;
+            accountLink.textContent='Min konto';
+            const form=document.getElementById('checkoutForm');
+            form.elements.name.value=me.name||'';
+            document.getElementById('userEmailInput').value=me.email||'';
+            form.elements.phone.value=me.phone||'';
+            if(me.membership?.active){
+                prices={bulk:249,economy:Math.round(299*.95),standard:Math.round(499*.95),express:Math.round(899*.95),walkthrough:Math.round(2199*.95),unlimited:Math.round(2199*.95)};
+                document.querySelector('#membership .lead').textContent='Du er aktiv Poke Bro. Din medlemspris anvendes automatisk, når du bestiller med din konto.';
+            }
+        } else {
+            accountLink.textContent='Log ind';
+            accountLink.href='login.html';
+            document.getElementById('loginWarning').style.display='block';
+            document.getElementById('submitOrderBtn').disabled=true;
+            document.getElementById('submitOrderBtn').style.opacity='0.5';
+            document.getElementById('submitOrderBtn').textContent='Log ind for at bestille';
+        }
+        calc();
+    }catch{calc();}
+}
 loadAccount();
-document.getElementById('checkoutForm').addEventListener('submit',async e=>{e.preventDefault();const btn=e.currentTarget.querySelector('.pay'),msg=document.getElementById('payMsg');btn.disabled=true;btn.textContent='Åbner betaling…';msg.textContent='';const data=Object.fromEntries(new FormData(e.currentTarget));data.qty=+q.value;data.tier=tier.value;try{const r=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});const j=await r.json();if(!r.ok)throw new Error(j.error||'Fejl');location.href=j.url}catch(err){msg.textContent=err.message;btn.disabled=false;btn.textContent='Gå til sikker betaling'}});
-document.querySelectorAll('.member-pay').forEach(btn=>btn.addEventListener('click',async()=>{const msg=document.getElementById('memberMsg');btn.disabled=true;msg.textContent='Kontrollerer konto…';try{const auth=await fetch('/api/auth/me').then(r=>r.json());if(!auth.loggedIn){location.href='/login.html?next=membership';return}const r=await fetch('/api/membership-checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan:btn.dataset.plan})});const j=await r.json();if(!r.ok)throw new Error(j.error||'Kunne ikke starte abonnementet');location.href=j.url}catch(e){msg.textContent=e.message;btn.disabled=false}}));
+
+document.getElementById('checkoutForm').addEventListener('submit',async e=>{
+    e.preventDefault();
+    const btn=e.currentTarget.querySelector('.pay'),msg=document.getElementById('payMsg');
+    btn.disabled=true;btn.textContent='Åbner betaling…';msg.textContent='';
+    const data=Object.fromEntries(new FormData(e.currentTarget));
+    data.qty=+q.value;data.tier=tier.value;
+    try{
+        const r=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+        const j=await r.json();
+        if(!r.ok) throw new Error(j.error||'Fejl');
+        location.href=j.url;
+    }catch(err){
+        msg.textContent=err.message;
+        btn.disabled=false;
+        btn.textContent='Gå til sikker betaling';
+    }
+});
+
+document.querySelectorAll('.member-pay').forEach(btn=>btn.addEventListener('click',async()=>{
+    const msg=document.getElementById('memberMsg');
+    btn.disabled=true;msg.textContent='Kontrollerer konto…';
+    try{
+        const auth=await fetch('/api/auth/me').then(r=>r.json());
+        if(!auth.loggedIn){location.href='/login.html?next=membership';return}
+        const r=await fetch('/api/membership-checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan:btn.dataset.plan})});
+        const j=await r.json();
+        if(!r.ok) throw new Error(j.error||'Kunne ikke starte abonnementet');
+        location.href=j.url;
+    }catch(e){msg.textContent=e.message;btn.disabled=false;}
+}));
 </script><div style="text-align:center;padding:24px;font-size:13px;opacity:.75"><a href="/handelsbetingelser.html">Handelsbetingelser</a> · <a href="/privatliv.html">Privatlivspolitik</a></div></body></html>
