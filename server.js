@@ -5,38 +5,18 @@ async function sendEmailViaBrevo({ to, subject, html }) {
     const apiKey = process.env.BREVO_API_KEY || process.env.SMTP_PASS; 
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
-        headers: {
-            'accept': 'application/json',
-            'api-key': apiKey,
-            'content-type': 'application/json'
-        },
-        body: JSON.stringify({
-            sender: { name: 'The Poke Bros', email: 'thomaslydholmjob98@gmail.com' },
-            to: [{ email: to }],
-            subject: subject,
-            htmlContent: html
-        })
+        headers: { 'accept': 'application/json', 'api-key': apiKey, 'content-type': 'application/json' },
+        body: JSON.stringify({ sender: { name: 'The Poke Bros', email: 'thomaslydholmjob98@gmail.com' }, to: [{ email: to }], subject: subject, htmlContent: html })
     });
-    if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(`Brevo API Fejl (${response.status}): ${JSON.stringify(errData)}`);
-    }
+    if (!response.ok) { const errData = await response.json(); throw new Error(`Brevo API Fejl (${response.status}): ${JSON.stringify(errData)}`); }
     return await response.json();
 }
 
 async function sendWelcomeEmail(toEmail, userName) {
     try {
         await sendEmailViaBrevo({
-            to: toEmail,
-            subject: 'Velkommen til Poke Bros!',
-            html: `
-                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-                    <h2>Velkommen til Poke Bros, ${userName}!</h2>
-                    <p>Mange tak fordi du oprettede en konto hos os.</p>
-                    <p>Husk at du kan bruge koden <code>MASTER2026</code> til at få 10% rabat på din første ordre!</p>
-                    <br><p>Med venlig hilsen,<br><strong>Poke Bros</strong></p>
-                </div>
-            `
+            to: toEmail, subject: 'Velkommen til Poke Bros!',
+            html: `<div style="font-family: Arial, sans-serif; padding: 20px; color: #333;"><h2>Velkommen til Poke Bros, ${userName}!</h2><p>Mange tak fordi du oprettede en konto hos os.</p><p>Husk at du kan bruge koden <code>MASTER2026</code> til at få 10% rabat på din første ordre!</p><br><p>Med venlig hilsen,<br><strong>Poke Bros</strong></p></div>`
         });
     } catch (err) { console.error('Fejl ved velkomstmail:', err); }
 }
@@ -44,22 +24,8 @@ async function sendWelcomeEmail(toEmail, userName) {
 async function sendOrderStatusEmail(toEmail, customerName, orderId, statusLabel, trackingNumber = '') {
     try {
         await sendEmailViaBrevo({
-            to: toEmail,
-            subject: `[Poke Bros] Statusopdatering for ordre ${orderId}`,
-            html: `
-                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px;">
-                    <h2 style="color: #e63946;">Statusopdatering på din ordre</h2>
-                    <p>Hej ${customerName},</p>
-                    <p>Der er en ny opdatering vedrørende din ordre <strong>${orderId}</strong>.</p>
-                    <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #e63946;">
-                        <p style="margin: 0; font-size: 14px; color: #666;">Ny status:</p>
-                        <h3 style="margin: 5px 0 0 0; color: #1a1a1a;">${statusLabel}</h3>
-                    </div>
-                    ${trackingNumber ? `<p><strong>Trackingnummer:</strong> ${trackingNumber}</p>` : ''}
-                    <p><a href="https://www.thepokebros.com/track.html" style="background: #e63946; color: #fff; padding: 10px 18px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">Følg din ordre her</a></p>
-                    <br><p>Med venlig hilsen,<br><strong>The Poke Bros</strong></p>
-                </div>
-            `
+            to: toEmail, subject: `[Poke Bros] Statusopdatering for ordre ${orderId}`,
+            html: `<div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px;"><h2 style="color: #e63946;">Statusopdatering på din ordre</h2><p>Hej ${customerName},</p><p>Der er en ny opdatering vedrørende din ordre <strong>${orderId}</strong>.</p><div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #e63946;"><p style="margin: 0; font-size: 14px; color: #666;">Ny status:</p><h3 style="margin: 5px 0 0 0; color: #1a1a1a;">${statusLabel}</h3></div>${trackingNumber ? `<p><strong>Trackingnummer:</strong> ${trackingNumber}</p>` : ''}<p><a href="https://www.thepokebros.com/track.html" style="background: #e63946; color: #fff; padding: 10px 18px; text-decoration: none; border-radius: 4px; display: inline-block; font-weight: bold;">Følg din ordre her</a></p><br><p>Med venlig hilsen,<br><strong>The Poke Bros</strong></p></div>`
         });
     } catch (err) { console.error('Fejl ved statusmail:', err); }
 }
@@ -69,14 +35,8 @@ const db=new Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.DB_
 
 db.query(`
     CREATE TABLE IF NOT EXISTS products (
-        id VARCHAR(64) PRIMARY KEY,
-        title VARCHAR(255) NOT NULL,
-        category VARCHAR(64) NOT NULL,
-        category_label VARCHAR(64),
-        price_dkk INT NOT NULL,
-        image_url TEXT,
-        sold BOOLEAN DEFAULT FALSE,
-        created_at TIMESTAMP DEFAULT NOW()
+        id VARCHAR(64) PRIMARY KEY, title VARCHAR(255) NOT NULL, category VARCHAR(64) NOT NULL,
+        category_label VARCHAR(64), price_dkk INT NOT NULL, image_url TEXT, sold BOOLEAN DEFAULT FALSE, created_at TIMESTAMP DEFAULT NOW()
     );
 `).catch(err => console.error('Kunne ikke oprette products tabel:', err));
 
@@ -102,11 +62,19 @@ app.post('/api/stripe-webhook',express.raw({type:'application/json'}),async(req,
 app.use(express.json({limit:'100kb'})); app.use(express.static(__dirname,{extensions:['html']}));
 const authLimiter=rateLimit({windowMs:15*60*1000,limit:30});
 
-app.get('/api/products', async (req, res) => {
+// Offentlig endpoint til at hente puljestatus til forsiden
+app.get('/api/pool-status', async (req, res) => {
     try {
-        const r = await db.query('SELECT * FROM products WHERE sold=FALSE ORDER BY created_at DESC');
-        res.json(r.rows);
-    } catch (err) { res.status(500).json({ error: 'Kunne ikke hente produkter.' }); }
+        const r = await db.query("SELECT SUM(qty) as total FROM orders WHERE status IN ('cards_received', 'awaiting_batch')");
+        const count = Number(r.rows[0]?.total || 0);
+        res.json({ count });
+    } catch (e) {
+        res.json({ count: 0 });
+    }
+});
+
+app.get('/api/products', async (req, res) => {
+    try { const r = await db.query('SELECT * FROM products WHERE sold=FALSE ORDER BY created_at DESC'); res.json(r.rows); } catch (err) { res.status(500).json({ error: 'Fejl' }); }
 });
 
 app.post('/api/shop-checkout', async (req, res) => {
@@ -114,83 +82,73 @@ app.post('/api/shop-checkout', async (req, res) => {
         const { productId } = req.body || {};
         const r = await db.query('SELECT * FROM products WHERE id=$1 AND sold=FALSE', [productId]);
         const product = r.rows[0];
-        if (!product) return res.status(404).json({ error: 'Produktet er solgt.' });
-        if (!process.env.STRIPE_SECRET_KEY) return res.status(503).json({ error: 'Betaling ikke aktiveret.' });
+        if (!product) return res.status(404).json({ error: 'Solgt.' });
+        if (!process.env.STRIPE_SECRET_KEY) return res.status(503).json({ error: 'Ikke aktiveret.' });
         const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
         const base = (process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
         const s = await stripe.checkout.sessions.create({
             mode: 'payment',
             line_items: [{ price_data: { currency: 'dkk', product_data: { name: product.title }, unit_amount: product.price_dkk * 100 }, quantity: 1 }, { price_data: { currency: 'dkk', product_data: { name: 'Forsikret Fragt' }, unit_amount: RETURN_SHIPPING_DKK * 100 }, quantity: 1 }],
             metadata: { type: 'shop_product', productId: product.id },
-            success_url: `${base}/shop.html?bought=success`,
-            cancel_url: `${base}/shop.html`
+            success_url: `${base}/shop.html?bought=success`, cancel_url: `${base}/shop.html`
         });
         res.json({ url: s.url });
-    } catch (err) { res.status(500).json({ error: 'Kunne ikke starte betaling.' }); }
+    } catch (err) { res.status(500).json({ error: 'Fejl' }); }
 });
 
 app.post('/api/admin/products', async (req, res) => {
-    if (!adminOK(req)) return res.status(401).json({ error: 'Forkert adgangskode.' });
+    if (!adminOK(req)) return res.status(401).json({ error: 'Forkert.' });
     try {
         const { title, category, categoryLabel, priceDkk, imageUrl } = req.body || {};
         const id = 'PRD-' + crypto.randomBytes(4).toString('hex').toUpperCase();
         await db.query('INSERT INTO products (id, title, category, category_label, price_dkk, image_url) VALUES ($1, $2, $3, $4, $5, $6)', [id, title, category, categoryLabel || category, Number(priceDkk), imageUrl || '']);
         res.json({ ok: true, id });
-    } catch (err) { res.status(500).json({ error: 'Kunne ikke oprette.' }); }
+    } catch (err) { res.status(500).json({ error: 'Fejl' }); }
 });
 
-app.post('/api/auth/register',authLimiter,async(req,res)=>{try{const name=String(req.body?.name||'').trim(),email=String(req.body?.email||'').trim().toLowerCase(),password=String(req.body?.password||'');if(name.length<2||!email.includes('@')||password.length<10)return res.status(400).json({error:'Ugyldige oplysninger.'});const id='USR-'+crypto.randomBytes(6).toString('hex');const r=await db.query('INSERT INTO users(id,name,email,phone,password_hash) VALUES($1,$2,$3,$4,$5) RETURNING *',[id,name,email,String(req.body?.phone||''),scryptHash(password)]);await setSession(res,id); sendWelcomeEmail(email, name); res.json({user:publicUser(r.rows[0])})}catch(e){res.status(500).json({error:'Fejl ved oprettelse.'})}});
-app.post('/api/auth/login',authLimiter,async(req,res)=>{const email=String(req.body?.email||'').trim().toLowerCase(),password=String(req.body?.password||'');const r=await db.query('SELECT * FROM users WHERE email=$1',[email]);const u=r.rows[0];if(!u||!verifyPassword(password,u.password_hash))return res.status(401).json({error:'Forkert login.'});await setSession(res,u.id);res.json({user:publicUser(u)})});
+app.post('/api/auth/register',authLimiter,async(req,res)=>{try{const name=String(req.body?.name||'').trim(),email=String(req.body?.email||'').trim().toLowerCase(),password=String(req.body?.password||'');if(name.length<2||!email.includes('@')||password.length<10)return res.status(400).json({error:'Ugyldig.'});const id='USR-'+crypto.randomBytes(6).toString('hex');const r=await db.query('INSERT INTO users(id,name,email,phone,password_hash) VALUES($1,$2,$3,$4,$5) RETURNING *',[id,name,email,String(req.body?.phone||''),scryptHash(password)]);await setSession(res,id); sendWelcomeEmail(email, name); res.json({user:publicUser(r.rows[0])})}catch(e){res.status(500).json({error:'Fejl'})}});
+app.post('/api/auth/login',authLimiter,async(req,res)=>{const email=String(req.body?.email||'').trim().toLowerCase(),password=String(req.body?.password||'');const r=await db.query('SELECT * FROM users WHERE email=$1',[email]);const u=r.rows[0];if(!u||!verifyPassword(password,u.password_hash))return res.status(401).json({error:'Forkert.'});await setSession(res,u.id);res.json({user:publicUser(u)})});
 app.post('/api/auth/logout',async(req,res)=>{await clearSession(req,res);res.json({ok:true})}); app.get('/api/auth/me',async(req,res)=>{const u=await sessionUser(req);res.json({loggedIn:!!u,user:u?publicUser(u):null})});
 app.get('/api/account',async(req,res)=>{const u=await sessionUser(req);if(!u)return res.status(401).json({error:'Log ind.'});const r=await db.query('SELECT order_id FROM orders WHERE user_id=$1 OR customer_email=$2 ORDER BY created_at DESC',[u.id,u.email]);const orders=[];for(const x of r.rows)orders.push(await publicOrder(x.order_id));res.json({user:publicUser(u),orders,pricing:Object.fromEntries(Object.keys(TIERS).map(k=>[k,priceFor(k,u)]))})});
-app.post('/api/membership-checkout',async(req,res)=>{try{const u=await sessionUser(req);if(!u)return res.status(401).json({error:'Log ind.'});const plan=req.body?.plan==='yearly'?'yearly':'monthly',amount=plan==='yearly'?59900:5900,interval=plan==='yearly'?'year':'month',stripe=require('stripe')(process.env.STRIPE_SECRET_KEY),base=(process.env.PUBLIC_URL||`${req.protocol}://${req.get('host')}`).replace(/\/$/,'');const s=await stripe.checkout.sessions.create({mode:'subscription',customer_email:u.email,line_items:[{price_data:{currency:'dkk',product_data:{name:'Poke Bro medlemskab'},unit_amount:amount,recurring:{interval}},quantity:1}],metadata:{type:'membership',plan,userId:u.id},success_url:`${base}/account.html?membership=success`,cancel_url:`${base}/#membership`});res.json({url:s.url})}catch(e){res.status(500).json({error:'Fejl.'})}});
-app.post('/api/confirm-membership',async(req,res)=>{try{const u=await sessionUser(req);if(!u)return res.status(401).json({error:'Log ind.'});const stripe=require('stripe')(process.env.STRIPE_SECRET_KEY),s=await stripe.checkout.sessions.retrieve(String(req.body?.sessionId||''));if(s.metadata?.userId===u.id)await activateMembership(u.email,s.metadata.plan,s.customer,s.subscription);res.json({user:publicUser((await db.query('SELECT * FROM users WHERE id=$1',[u.id])).rows[0])})}catch(e){res.status(500).json({error:'Fejl.'})}});
+app.post('/api/membership-checkout',async(req,res)=>{try{const u=await sessionUser(req);if(!u)return res.status(401).json({error:'Log ind.'});const plan=req.body?.plan==='yearly'?'yearly':'monthly',amount=plan==='yearly'?59900:5900,interval=plan==='yearly'?'year':'month',stripe=require('stripe')(process.env.STRIPE_SECRET_KEY),base=(process.env.PUBLIC_URL||`${req.protocol}://${req.get('host')}`).replace(/\/$/,'');const s=await stripe.checkout.sessions.create({mode:'subscription',customer_email:u.email,line_items:[{price_data:{currency:'dkk',product_data:{name:'Poke Bro medlemskab'},unit_amount:amount,recurring:{interval}},quantity:1}],metadata:{type:'membership',plan,userId:u.id},success_url:`${base}/account.html?membership=success`,cancel_url:`${base}/#membership`});res.json({url:s.url})}catch(e){res.status(500).json({error:'Fejl'})}});
+app.post('/api/confirm-membership',async(req,res)=>{try{const u=await sessionUser(req);if(!u)return res.status(401).json({error:'Log ind.'});const stripe=require('stripe')(process.env.STRIPE_SECRET_KEY),s=await stripe.checkout.sessions.retrieve(String(req.body?.sessionId||''));if(s.metadata?.userId===u.id)await activateMembership(u.email,s.metadata.plan,s.customer,s.subscription);res.json({user:publicUser((await db.query('SELECT * FROM users WHERE id=$1',[u.id])).rows[0])})}catch(e){res.status(500).json({error:'Fejl'})}});
 
-// CHECKOUT MED RABATKODE-LOGIK (10% på første ordre ved koden MASTER2026)
 app.post('/api/checkout',async(req,res)=>{try{
     const u=await sessionUser(req),qty=Math.max(1,Math.min(100,Number(req.body.qty)||1));
     const {name,email,phone,address,postal,city,notes,coupon}=req.body;
     const tierKey=String(req.body.tier||'bulk').toLowerCase(),tier=TIERS[tierKey]||TIERS.bulk;
-    if(!name||!email||!address||!postal||!city)return res.status(400).json({error:'Udfyld navn, e-mail og adresse.'});
-    if(!process.env.STRIPE_SECRET_KEY)return res.status(503).json({error:'Betaling ikke aktiveret.'});
+    if(!name||!email||!address||!postal||!city)return res.status(400).json({error:'Udfyld felter.'});
+    if(!process.env.STRIPE_SECRET_KEY)return res.status(503).json({error:'Ikke aktiveret.'});
 
     let unit=priceFor(tierKey,u);
     let discountApplied=false;
-
-    // Tjek rabatkode
     if(coupon && coupon.trim().toUpperCase()==='MASTER2026') {
-        // Tjek om kunden har haft tidligere ordrer (med samme e-mail eller user_id)
         const prevOrders = await db.query('SELECT COUNT(*) c FROM orders WHERE customer_email=$1 OR user_id=$2', [String(email).trim().toLowerCase(), u?.id || 'none']);
-        if(Number(prevOrders.rows[0].c) === 0) {
-            unit = Math.round(unit * 0.9); // 10% rabat
-            discountApplied = true;
-        }
+        if(Number(prevOrders.rows[0].c) === 0) { unit = Math.round(unit * 0.9); discountApplied = true; }
     }
 
     const gradingTotal = qty * unit;
     const id='TPB-'+new Date().toISOString().slice(0,10).replaceAll('-','')+'-'+crypto.randomBytes(3).toString('hex').toUpperCase();
     const stripe=require('stripe')(process.env.STRIPE_SECRET_KEY),base=(process.env.PUBLIC_URL||`${req.protocol}://${req.get('host')}`).replace(/\/$/,'');
 
-    await db.query('INSERT INTO orders(order_id,user_id,qty,tier,unit_price_dkk,member_price_applied,grading_dkk,return_shipping_dkk,total_dkk,customer_name,customer_email,customer_phone,customer_address,customer_postal,customer_city,notes) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)',[id,u?.id||null,qty,tierKey,unit,!!u?.membership_active,gradingTotal,RETURN_SHIPPING_DKK,gradingTotal+RETURN_SHIPPING_DKK,name,String(email).trim().toLowerCase(),phone||'',address,postal,city,(notes||'')+(discountApplied?' [Rabatkode MASTER2026 anvendt: 10%]':'')]);
+    await db.query('INSERT INTO orders(order_id,user_id,qty,tier,unit_price_dkk,member_price_applied,grading_dkk,return_shipping_dkk,total_dkk,customer_name,customer_email,customer_phone,customer_address,customer_postal,customer_city,notes) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)',[id,u?.id||null,qty,tierKey,unit,!!u?.membership_active,gradingTotal,RETURN_SHIPPING_DKK,gradingTotal+RETURN_SHIPPING_DKK,name,String(email).trim().toLowerCase(),phone||'',address,postal,city,(notes||'')+(discountApplied?' [Rabatkode MASTER2026 anvendt]':'')]);
     await timeline(id,'payment_pending');
 
     const s=await stripe.checkout.sessions.create({
-        mode:'payment',
-        customer_email:email,
+        mode:'payment', customer_email:email,
         line_items:[
-            {price_data:{currency:'dkk',product_data:{name:`${tier.name} via The Poke Bros${discountApplied?' (10% Master Ball rabat)':''}`},unit_amount:unit*100},quantity:qty},
+            {price_data:{currency:'dkk',product_data:{name:`${tier.name} via The Poke Bros${discountApplied?' (10% rabat)':''}`},unit_amount:unit*100},quantity:qty},
             {price_data:{currency:'dkk',product_data:{name:'Returfragt i Danmark'},unit_amount:RETURN_SHIPPING_DKK*100},quantity:1}
         ],
         metadata:{orderId:id,qty:String(qty),tier:tierKey,userId:u?.id||''},
-        success_url:`${base}/success.html?session_id={CHECKOUT_SESSION_ID}&order=${id}`,
-        cancel_url:`${base}/#order`
+        success_url:`${base}/success.html?session_id={CHECKOUT_SESSION_ID}&order=${id}`, cancel_url:`${base}/#order`
     });
     await db.query('UPDATE orders SET stripe_session_id=$1 WHERE order_id=$2',[s.id,id]);
     res.json({url:s.url});
-}catch(e){console.error(e);res.status(500).json({error:'Kunne ikke starte betaling.'})}});
+}catch(e){console.error(e);res.status(500).json({error:'Fejl'})}});
 
-app.post('/api/confirm-payment',async(req,res)=>{try{const stripe=require('stripe')(process.env.STRIPE_SECRET_KEY),s=await stripe.checkout.sessions.retrieve(req.body.sessionId);if(s.metadata?.orderId!==req.body.orderId)return res.status(400).json({error:'Fejl.'});if(s.payment_status==='paid'){const q=await db.query("UPDATE orders SET payment_status='paid',status=CASE WHEN status='payment_pending' THEN 'awaiting_cards' ELSE status END WHERE order_id=$1 RETURNING status",[req.body.orderId]);if(q.rows[0]?.status==='awaiting_cards')await timeline(req.body.orderId,'awaiting_cards','Betaling registreret.');}res.json(await publicOrder(req.body.orderId))}catch(e){res.status(500).json({error:'Fejl.'})}});
-app.post('/api/track',async(req,res)=>{const id=String(req.body?.orderId||'').trim().toUpperCase(),email=String(req.body?.email||'').trim().toLowerCase(),r=await db.query('SELECT order_id FROM orders WHERE order_id=$1 AND customer_email=$2',[id,email]);if(!r.rows[0])return res.status(404).json({error:'Ordren ikke fundet.'});res.json(await publicOrder(id))});
+app.post('/api/confirm-payment',async(req,res)=>{try{const stripe=require('stripe')(process.env.STRIPE_SECRET_KEY),s=await stripe.checkout.sessions.retrieve(req.body.sessionId);if(s.metadata?.orderId!==req.body.orderId)return res.status(400).json({error:'Fejl'});if(s.payment_status==='paid'){const q=await db.query("UPDATE orders SET payment_status='paid',status=CASE WHEN status='payment_pending' THEN 'awaiting_cards' ELSE status END WHERE order_id=$1 RETURNING status",[req.body.orderId]);if(q.rows[0]?.status==='awaiting_cards')await timeline(req.body.orderId,'awaiting_cards','Betaling registreret.');}res.json(await publicOrder(req.body.orderId))}catch(e){res.status(500).json({error:'Fejl'})}});
+app.post('/api/track',async(req,res)=>{const id=String(req.body?.orderId||'').trim().toUpperCase(),email=String(req.body?.email||'').trim().toLowerCase(),r=await db.query('SELECT order_id FROM orders WHERE order_id=$1 AND customer_email=$2',[id,email]);if(!r.rows[0])return res.status(404).json({error:'Ikke fundet.'});res.json(await publicOrder(id))});
 app.get('/api/admin/orders',async(req,res)=>{if(!adminOK(req))return res.status(401).json({error:'Forkert.'});const r=await db.query('SELECT * FROM orders ORDER BY created_at DESC'),orders=[];for(const o of r.rows){const p=await publicOrder(o.order_id);orders.push({...o,...p})}const poolCards=r.rows.filter(o=>['cards_received','awaiting_batch'].includes(o.status)).reduce((n,o)=>n+o.qty,0),members=Number((await db.query('SELECT COUNT(*) c FROM users WHERE membership_active=TRUE')).rows[0].c);res.json({orders,statuses:STATUS,stats:{orders:r.rowCount,poolCards,paidRevenueDkk:r.rows.filter(o=>o.payment_status==='paid').reduce((n,o)=>n+o.total_dkk,0),members}})});
 
 app.patch('/api/admin/orders/:id',async(req,res)=>{if(!adminOK(req))return res.status(401).json({error:'Forkert.'});const {status,batch,trackingNumber,note}=req.body||{};const cur=(await db.query('SELECT * FROM orders WHERE order_id=$1',[req.params.id])).rows[0];if(!cur)return res.status(404).json({error:'Ikke fundet.'});
@@ -203,13 +161,9 @@ app.post('/api/sell-collection', authLimiter, async (req, res) => {
     try {
         const { name, email, phone, description, link } = req.body || {};
         if (!name || !email || !description) return res.status(400).json({ error: 'Udfyld felter.' });
-        await sendEmailViaBrevo({
-            to: 'thomaslydholmjob98@gmail.com',
-            subject: `[Poke Bros Opkøb] Ny samling af ${name}`,
-            html: `<p><b>Navn:</b> ${name}</p><p><b>Email:</b> ${email}</p><p>${description}</p>`
-        });
+        await sendEmailViaBrevo({ to: 'thomaslydholmjob98@gmail.com', subject: `[Poke Bros Opkøb] Ny samling af ${name}`, html: `<p><b>Navn:</b> ${name}</p><p><b>Email:</b> ${email}</p><p>${description}</p>` });
         res.json({ ok: true, message: 'Sendt!' });
-    } catch (e) { res.status(500).json({ error: 'Fejl.' }); }
+    } catch (e) { res.status(500).json({ error: 'Fejl' }); }
 });
 
 app.get('/api/health',async(req,res)=>{try{await db.query('SELECT 1');res.json({ok:true})}catch{res.status(503).json({ok:false})}});
