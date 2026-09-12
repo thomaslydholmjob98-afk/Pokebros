@@ -25,9 +25,9 @@
         textarea.gen-output { width: 100%; height: 200px; padding: 15px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 6px; font-family: monospace; font-size: 14px; box-sizing: border-box; resize: vertical; }
         .success-msg { color: #2ecc71; font-weight: bold; font-size: 14px; margin-top: 10px; display: none; }
         
-        .upload-btn-container { margin-top: 10px; text-align: center; background: #1a1e29; border: 2px dashed #333; border-radius: 8px; padding: 15px; cursor: pointer; transition: border-color 0.2s; }
-        .upload-btn-container:hover { border-color: #e63946; }
-        .upload-preview-img { max-height: 120px; border-radius: 6px; margin-top: 10px; display: none; margin-left: auto; margin-right: auto; }
+        .upload-field { border: 2px dashed #333; border-radius: 8px; padding: 20px; text-align: center; background: #1a1e29; cursor: pointer; transition: border-color 0.2s; margin-top: 5px; }
+        .upload-field:hover { border-color: #e63946; }
+        .upload-preview { max-height: 140px; border-radius: 6px; margin-top: 10px; display: none; margin-left: auto; margin-right: auto; }
     </style>
 </head>
 <body>
@@ -98,34 +98,35 @@
             </div>
         </div>
 
+        <!-- OPRET PRODUKT MED DIREKTE UPLOAD -->
         <div class="admin-card">
             <h2>Opret nyt produkt i Shoppen</h2>
             <form id="productForm" onsubmit="createProduct(event)" style="display: flex; flex-direction: column; gap: 15px;">
                 <div style="display: flex; gap: 15px; flex-wrap: wrap;">
                     <div style="flex: 2; min-width: 200px;">
                         <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Titel *</label>
-                        <input type="text" name="title" placeholder="Fx Charizard PSA 10" required style="width: 100%; padding: 10px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; box-sizing: border-box;">
+                        <input type="text" id="prodTitle" placeholder="Fx Charizard PSA 10" required style="width: 100%; padding: 10px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; box-sizing: border-box;">
                     </div>
                     <div style="flex: 1; min-width: 140px;">
                         <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Kategori</label>
-                        <input type="text" name="category" placeholder="Fx Slabs / Kort" style="width: 100%; padding: 10px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; box-sizing: border-box;">
+                        <input type="text" id="prodCategory" placeholder="Fx Slabs / Kort" style="width: 100%; padding: 10px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; box-sizing: border-box;">
                     </div>
                     <div style="flex: 1; min-width: 100px;">
                         <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Pris (DKK) *</label>
-                        <input type="number" name="priceDkk" placeholder="1499" required style="width: 100%; padding: 10px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; box-sizing: border-box;">
+                        <input type="number" id="prodPrice" placeholder="1499" required style="width: 100%; padding: 10px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; box-sizing: border-box;">
                     </div>
                 </div>
 
                 <div>
                     <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Produktbillede (Upload fra mobil eller PC)</label>
-                    <input type="file" id="fileInput" accept="image/*" onchange="handleFileSelect(event)" style="display: none;">
-                    <div class="upload-btn-container" onclick="document.getElementById('fileInput').click()">
-                        <p id="uploadText" style="margin:0; color:#ccc; font-weight:bold; font-size:14px;">📸 Klik her for at vælge eller tage et billede</p>
-                        <img id="previewImg" class="upload-preview-img" alt="Preview">
+                    <input type="file" id="prodImageFile" accept="image/*" onchange="handleProductImageSelect(event)" style="display: none;">
+                    <div class="upload-field" onclick="document.getElementById('prodImageFile').click()">
+                        <p id="uploadPrompt" style="margin:0; color:#ccc; font-size:14px; font-weight:bold;">📸 Klik her for at vælge eller tage et billede fra din enhed</p>
+                        <img id="prodImagePreview" class="upload-preview" alt="Preview">
                     </div>
                 </div>
 
-                <button type="submit" id="submitProdBtn" class="btn" style="padding: 12px 24px; align-self: flex-start;">Opret produkt i shoppen</button>
+                <button type="submit" id="createProductBtn" class="btn" style="padding: 12px 24px; align-self: flex-start;">Opret produkt</button>
             </form>
         </div>
 
@@ -172,7 +173,7 @@
 
     <script>
         let adminPass = localStorage.getItem('tpb_admin_pass') || '';
-        let compressedImageData = '';
+        let productBase64Image = '';
 
         if (adminPass) {
             verifyAndLoadDashboard();
@@ -221,8 +222,7 @@
             location.reload();
         }
 
-        // Billedbehandling: Komprimerer billedet til maks 600px i bredde/højde
-        function handleFileSelect(event) {
+        function handleProductImageSelect(event) {
             const file = event.target.files[0];
             if (!file) return;
 
@@ -252,13 +252,13 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    compressedImageData = canvas.toDataURL('image/jpeg', 0.7);
+                    productBase64Image = canvas.toDataURL('image/jpeg', 0.7);
 
-                    const preview = document.getElementById('previewImg');
-                    const text = document.getElementById('uploadText');
-                    preview.src = compressedImageData;
+                    const preview = document.getElementById('prodImagePreview');
+                    const promptText = document.getElementById('uploadPrompt');
+                    preview.src = productBase64Image;
                     preview.style.display = 'block';
-                    text.textContent = '✅ Billede valgt! Klik for at skifte';
+                    promptText.textContent = '✅ Billede valgt og klar! (Klik for at skifte)';
                 };
                 img.src = e.target.result;
             };
@@ -267,19 +267,18 @@
 
         async function createProduct(e) {
             e.preventDefault();
-            const form = e.target;
-            const formData = new FormData(form);
-            
-            const submitBtn = document.getElementById('submitProdBtn');
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Opretter produkt...';
+            const title = document.getElementById('prodTitle').value.trim();
+            const category = document.getElementById('prodCategory').value.trim();
+            const priceDkk = document.getElementById('prodPrice').value.trim();
 
-            const payload = {
-                title: formData.get('title'),
-                category: formData.get('category') || 'Diverse',
-                priceDkk: Number(formData.get('priceDkk')),
-                imageUrl: compressedImageData || 'https://via.placeholder.com/400x300?text=The+Poke+Bros'
-            };
+            if (!title || !priceDkk) {
+                alert('Indtast venligst både titel og pris.');
+                return;
+            }
+
+            const btn = document.getElementById('createProductBtn');
+            btn.disabled = true;
+            btn.textContent = 'Opretter produkt...';
 
             try {
                 const res = await fetch('/api/admin/products', {
@@ -288,7 +287,12 @@
                         'Content-Type': 'application/json', 
                         'x-admin-password': adminPass 
                     },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({
+                        title,
+                        category: category || 'Diverse',
+                        priceDkk: Number(priceDkk),
+                        imageUrl: productBase64Image || ''
+                    })
                 });
 
                 const resData = await res.json();
@@ -296,16 +300,16 @@
                     throw new Error(resData.error || 'Fejl ved oprettelse af produkt');
                 }
 
-                alert('Produkt oprettet succesfuldt!');
-                form.reset();
-                compressedImageData = '';
-                document.getElementById('previewImg').style.display = 'none';
-                document.getElementById('uploadText').textContent = '📸 Klik her for at vælge eller tage et billede';
+                alert('Produkt oprettet succesfuldt i shoppen!');
+                document.getElementById('productForm').reset();
+                document.getElementById('prodImagePreview').style.display = 'none';
+                document.getElementById('uploadPrompt').textContent = '📸 Klik her for at vælge eller tage et billede fra din enhed';
+                productBase64Image = '';
             } catch (err) { 
                 alert('Kunne ikke oprette produkt: ' + err.message); 
             } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Opret produkt i shoppen';
+                btn.disabled = false;
+                btn.textContent = 'Opret produkt';
             }
         }
 
