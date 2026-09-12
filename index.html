@@ -1,100 +1,242 @@
-<!doctype html><html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Poke Bros | CGC Grading Service</title><meta name="description" content="Send dine samlekort til The Poke Bros og få dem indsendt til CGC grading uden selv at skulle samle en stor submission."><link rel="stylesheet" href="style.css">
-<style>
-    /* Svævende Master Ball & Genert flugt-effekt (Større størrelse) */
-    @keyframes floatMasterBall {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-18px); }
-    }
-    #easterEggContainer {
-        position: fixed; bottom: 30px; right: 30px; width: 85px; height: 85px;
-        z-index: 9999; 
-        animation: floatMasterBall 3.5s ease-in-out infinite;
-        padding: 40px; 
-        margin: -40px; 
-    }
-    #pokeEasterEgg {
-        width: 100%; height: 100%; position: relative;
-        cursor: pointer; display: flex; align-items: center; justify-content: center;
-        transition: transform 0.4s ease-out;
-        filter: drop-shadow(0 6px 16px rgba(0,0,0,0.6));
-    }
-    #pokeEasterEgg:hover { transform: scale(1.15) rotate(10deg); }
+<!doctype html>
+<html lang="da">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>The Poke Bros | CGC Grading Service</title>
+    <meta name="description" content="Send dine samlekort til The Poke Bros og få dem indsendt til CGC grading uden selv at skulle samle en stor submission.">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Svævende Master Ball & Genert flugt-effekt (Stor og tydelig) */
+        @keyframes floatMasterBall {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-18px); }
+        }
+        #easterEggContainer {
+            position: fixed; bottom: 30px; right: 30px; width: 85px; height: 85px;
+            z-index: 9999; 
+            animation: floatMasterBall 3.5s ease-in-out infinite;
+            padding: 40px; 
+            margin: -40px; 
+        }
+        #pokeEasterEgg {
+            width: 100%; height: 100%; position: relative;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: transform 0.4s ease-out;
+            filter: drop-shadow(0 6px 16px rgba(0,0,0,0.6));
+        }
+        #pokeEasterEgg:hover { transform: scale(1.15) rotate(10deg); }
 
-    /* Master Ball regnvejr efter klik */
-    @keyframes fall { 0% { transform: translateY(-60px) rotate(0deg); opacity: 1; } 100% { transform: translateY(105vh) rotate(360deg); opacity: 0; } }
-    .falling-masterball {
-        position: fixed; top: -60px; width: 50px; height: 50px;
-        z-index: 9998; pointer-events: none; animation: fall linear forwards;
-        filter: drop-shadow(0 3px 8px rgba(0,0,0,0.4));
-    }
-</style>
-</head><body>
-<header><a class="brand" href="#">THE POKE BROS</a><nav><a href="#how">Sådan virker det</a><a href="#prices">Priser</a><a href="#membership">Bliv en Poke Bro</a><a href="shop.html">Shop</a><a href="/selg.html">Sælg din samling</a><a href="#faq">FAQ</a><a href="track.html">Spor ordre</a><a href="#contact">Kontakt</a><a href="account.html" id="accountLink">Min konto</a></nav><a class="btn small" href="#order">Bestil grading</a></header>
-<main><section class="hero"><div class="hero-img"></div><div class="shade"></div><div class="hero-copy"><span class="eyebrow">CGC GRADING • NEMT FOR DANSKE SAMLERE</span><h1>Få dine kort graded<br>uden en stor submission.</h1><p>Send det antal kort, du ønsker, til The Poke Bros. Vi samler kundernes kort og håndterer submissionen til CGC.</p><div class="actions"><a class="btn" href="#order">Send kort til grading</a><a class="btn ghost" href="#how">Sådan fungerer det</a></div></div></section>
+        /* Master Ball regnvejr efter klik */
+        @keyframes fall { 0% { transform: translateY(-60px) rotate(0deg); opacity: 1; } 100% { transform: translateY(105vh) rotate(360deg); opacity: 0; } }
+        .falling-masterball {
+            position: fixed; top: -60px; width: 50px; height: 50px;
+            z-index: 9998; pointer-events: none; animation: fall linear forwards;
+            filter: drop-shadow(0 3px 8px rgba(0,0,0,0.4));
+        }
+    </style>
+</head>
+<body>
+<header>
+    <a class="brand" href="#">THE POKE BROS</a>
+    <nav>
+        <a href="#how">Sådan virker det</a>
+        <a href="#prices">Priser</a>
+        <a href="#membership">Bliv en Poke Bro</a>
+        <a href="shop.html">Shop</a>
+        <a href="/selg.html">Sælg din samling</a>
+        <a href="#faq">FAQ</a>
+        <a href="track.html">Spor ordre</a>
+        <a href="#contact">Kontakt</a>
+        <a href="account.html" id="accountLink">Min konto</a>
+    </nav>
+    <a class="btn small" href="#order">Bestil grading</a>
+</header>
 
-<!-- CGC Submission Progress Tracker -->
-<section style="background: #111318; padding: 30px 20px; border-bottom: 1px solid #222; text-align: center;">
-    <div style="max-width: 600px; margin: 0 auto;">
-        <span class="eyebrow" style="color: #e63946; font-weight: bold; font-size: 12px; letter-spacing: 1px;">NÆSTE CGC BULK-AFSENDELSE</span>
-        <h3 style="margin: 8px 0; font-size: 20px; color: #fff;">Puljestatus: <span id="poolCount">0</span> / 25 kort samlet</h3>
-        <p style="color: #aaa; font-size: 14px; margin-bottom: 15px;">Vi sender næste kasse til CGC så snart puljen når 25 kort. Bestil i dag for at nå med!</p>
-        <div style="background: #222633; border-radius: 20px; height: 16px; width: 100%; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
-            <div id="poolBar" style="background: linear-gradient(90deg, #e63946, #ff4d5a); height: 100%; width: 0%; border-radius: 20px; transition: width 0.5s ease;"></div>
+<main>
+    <section class="hero">
+        <div class="hero-img"></div>
+        <div class="shade"></div>
+        <div class="hero-copy">
+            <span class="eyebrow">CGC GRADING • NEMT FOR DANSKE SAMLERE</span>
+            <h1>Få dine kort graded<br>uden en stor submission.</h1>
+            <p>Send det antal kort, du ønsker, til The Poke Bros. Vi samler kundernes kort og håndterer submissionen til CGC.</p>
+            <div class="actions">
+                <a class="btn" href="#order">Send kort til grading</a>
+                <a class="btn ghost" href="#how">Sådan fungerer det</a>
+            </div>
         </div>
-    </div>
-</section>
+    </section>
 
-<!-- Hurtig Ordre-Søger på Forsiden -->
-<section style="background: #0d0f12; padding: 40px 20px; border-bottom: 1px solid #222; text-align: center;">
-    <div style="max-width: 600px; margin: 0 auto;">
-        <span class="eyebrow" style="color: #e63946; font-weight: bold; font-size: 12px; letter-spacing: 1px;">HURTIG SPORING</span>
-        <h3 style="margin: 8px 0; font-size: 22px; color: #fff;">Hvor er dine kort?</h3>
-        <p style="color: #aaa; font-size: 14px; margin-bottom: 20px;">Tjek status på din submission med det samme ved at indtaste dit ordrenummer og e-mail.</p>
-        
-        <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
-            <input type="text" id="homeOrderId" placeholder="Ordrenummer (fx TPB-...)" style="flex: 1; min-width: 200px; padding: 12px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 6px; text-transform: uppercase;">
-            <input type="email" id="homeEmail" placeholder="Din e-mailadresse" style="flex: 1; min-width: 200px; padding: 12px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 6px;">
-            <button onclick="homeTrackOrder()" class="btn" style="padding: 12px 24px;">Søg</button>
+    <!-- CGC Submission Progress Tracker -->
+    <section style="background: #111318; padding: 30px 20px; border-bottom: 1px solid #222; text-align: center;">
+        <div style="max-width: 600px; margin: 0 auto;">
+            <span class="eyebrow" style="color: #e63946; font-weight: bold; font-size: 12px; letter-spacing: 1px;">NÆSTE CGC BULK-AFSENDELSE</span>
+            <h3 style="margin: 8px 0; font-size: 20px; color: #fff;">Puljestatus: <span id="poolCount">0</span> / 25 kort samlet</h3>
+            <p style="color: #aaa; font-size: 14px; margin-bottom: 15px;">Vi sender næste kasse til CGC så snart puljen når 25 kort. Bestil i dag for at nå med!</p>
+            <div style="background: #222633; border-radius: 20px; height: 16px; width: 100%; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);">
+                <div id="poolBar" style="background: linear-gradient(90deg, #e63946, #ff4d5a); height: 100%; width: 0%; border-radius: 20px; transition: width 0.5s ease;"></div>
+            </div>
         </div>
-        <div id="homeTrackResult" style="margin-top: 20px; text-align: left; display: none; background: #1a1e29; padding: 20px; border-radius: 8px; border: 1px solid #333; color: #fff;"></div>
-    </div>
-</section>
+    </section>
 
-<section class="trust"><div><b>1+ kort</b><span>Du vælger antallet</span></div><div><b>Sikker proces</b><span>Tydelig håndtering fra start til slut</span></div><div><b>CGC submission</b><span>Vi står for indsendelsen</span></div><div><b>Dansk service</b><span>Hjælp under hele forløbet</span></div></section>
-<section id="how" class="section"><span class="eyebrow">SÅDAN VIRKER DET</span><h2>Fra din samling til grading i 3 trin</h2><div class="cards"><article><i>01</i><h3>Bestil</h3><p>Vælg hvor mange kort du ønsker at indsende og registrér dine oplysninger.</p></article><article><i>02</i><h3>Send til os</h3><p>Du modtager instruktioner til sikker pakning og forsendelse af dine kort.</p></article><article><i>03</i><h3>Vi klarer resten</h3><p>Vi samler submissionen, sender til CGC og returnerer dine slabs, når de er tilbage.</p></article></div></section>
-<section id="prices" class="section alt"><span class="eyebrow">PRISER</span><h2>Vælg den CGC-service der passer til dit kort</h2><p class="lead">Du kan bestille fra 1 kort. Priserne nedenfor er The Poke Bros' servicepriser pr. kort og er sat med buffer til CGC-gebyr, fælles international fragt, forsikring, håndtering og valutakurs. Returfragt til kunden tillægges én gang pr. ordre.</p><div class="tier-grid">
-<div class="tier featured"><h3>Bulk</h3><b>279 kr. / kort</b><p>CGC: $15,30 • maks. deklareret værdi $500 • CGC kræver 25 kort, men hos os kan du sende fra 1.</p></div>
-<div class="tier"><h3>Economy</h3><b>299 kr. / kort</b><p>CGC: $18,00 • maks. deklareret værdi $1.000 pr. kort.</p></div>
-<div class="tier"><h3>Standard</h3><b>499 kr. / kort</b><p>CGC: $49,50 • maks. deklareret værdi $3.000 pr. kort.</p></div>
-<div class="tier"><h3>Express</h3><b>899 kr. / kort</b><p>CGC: $90,00 • maks. deklareret værdi $10.000 pr. kort.</p></div>
-<div class="tier"><h3>WalkThrough</h3><b>2.199 kr. / kort</b><p>CGC: $270,00 • maks. deklareret værdi $100.000 pr. kort.</p></div>
-<div class="tier"><h3>Unlimited Value</h3><b>Fra 2.199 kr. / kort</b><p>CGC: $270 + 0,9 % af FMV. Den variable afgift viderefaktureres efter kortets Fair Market Value.</p></div>
-</div><p class="fineprint">Priserne er beregnet ud fra CGC-priserne, du har oplyst. Hvis CGC ændrer priser, valutakurs, declared value eller opgraderer et kort til en anden tier, kan en efterregulering være nødvendig. Forsendelser håndteres med forsikring efter de valgte transportvilkår.</p></section>
-<section id="membership" class="section membership"><span class="eyebrow">MEDLEMSKAB</span><h2>Bliv en Poke Bro</h2><p class="lead">Til dig der grader løbende. Som medlem får du en lavere Bulk-pris og ekstra medlemsfordele.</p><div class="member-card"><div><span class="member-badge">POKE BRO MEMBER</span><h3>59 kr. / måned</h3><p class="annual">eller 599 kr. / år</p><ul><li><b>Bulk til 249 kr. pr. kort</b> – spar 30 kr. pr. kort</li><li>5 % medlemsrabat på øvrige faste CGC-tiers</li><li>Mulighed for at samle egne returordrer, hvor det kan lade sig gøre</li><li>Adgang til kommende medlemstilbud og fordele</li></ul><p class="fineprint">Medlemskabet fortsætter, indtil det opsiges. Medlemspris gælder kun, mens medlemskabet er aktivt. CGC-gebyrer, FMV-tillæg og særlige omkostninger kan fortsat medføre efterregulering.</p></div><div class="member-actions"><strong>Vælg medlemskab</strong><button class="btn member-pay" data-plan="monthly">59 kr./md.</button><button class="btn ghost member-pay" data-plan="yearly">599 kr./år</button><small id="memberMsg"></small></div></div></section>
+    <!-- Hurtig Ordre-Søger på Forsiden -->
+    <section style="background: #0d0f12; padding: 40px 20px; border-bottom: 1px solid #222; text-align: center;">
+        <div style="max-width: 600px; margin: 0 auto;">
+            <span class="eyebrow" style="color: #e63946; font-weight: bold; font-size: 12px; letter-spacing: 1px;">HURTIG SPORING</span>
+            <h3 style="margin: 8px 0; font-size: 22px; color: #fff;">Hvor er dine kort?</h3>
+            <p style="color: #aaa; font-size: 14px; margin-bottom: 20px;">Tjek status på din submission med det samme ved at indtaste dit ordrenummer og e-mail.</p>
+            
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+                <input type="text" id="homeOrderId" placeholder="Ordrenummer (fx TPB-...)" style="flex: 1; min-width: 200px; padding: 12px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 6px; text-transform: uppercase;">
+                <input type="email" id="homeEmail" placeholder="Din e-mailadresse" style="flex: 1; min-width: 200px; padding: 12px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 6px;">
+                <button onclick="homeTrackOrder()" class="btn" style="padding: 12px 24px;">Søg</button>
+            </div>
+            <div id="homeTrackResult" style="margin-top: 20px; text-align: left; display: none; background: #1a1e29; padding: 20px; border-radius: 8px; border: 1px solid #333; color: #fff;"></div>
+        </div>
+    </section>
 
-<section id="order" class="section"><span class="eyebrow">BESTIL GRADING</span><h2>Bestil fra bare 1 kort</h2><p class="lead">Vælg CGC-service, antal kort og returfragt. Systemet beregner prisen automatisk.</p><div class="checkout-grid"><div class="calculator"><label for="tier">CGC-service</label><select id="tier"><option value="bulk">Bulk – 279 kr.</option><option value="economy">Economy – 299 kr.</option><option value="standard">Standard – 499 kr.</option><option value="express">Express – 899 kr.</option><option value="walkthrough">WalkThrough – 2.199 kr.</option><option value="unlimited">Unlimited Value – fra 2.199 kr.</option></select>
-<label for="shippingMethod">Returfragt</label><select id="shippingMethod"><option value="pakkeshop">Forsikret Pakkeshop (49 kr.)</option><option value="hjemmelevering" selected>Forsikret Hjemmelevering (69 kr.)</option></select><label for="qty">Antal kort</label><div class="qtyrow"><button type="button" id="minus">−</button><input id="qty" type="number" min="1" max="100" value="1"><button type="button" id="plus">+</button></div><div class="total"><span>Grading & service</span><strong id="gradingTotal">279 kr.</strong></div><div class="total"><span>Returfragt</span><strong id="shippingTotal">69 kr.</strong></div><div class="total grand"><span>I alt</span><strong id="total">348 kr.</strong></div><small id="tierNote">Bulk: maks. deklareret værdi $500 pr. kort. Du betaler selv forsendelsen af kortene til The Poke Bros.</small></div>
-<form id="checkoutForm" class="order-form">
-    <div id="loginWarning" style="background: #2c1a1a; border: 1px solid #e63946; padding: 12px; border-radius: 6px; margin-bottom: 15px; display: none; text-align: center;">
-        <p style="margin: 0; font-size: 14px; color: #ff4d5a;">Du skal være <a href="login.html" style="color: #fff; text-decoration: underline;">logget ind</a> for at bestille.</p>
-    </div>
-    <label>Navn<input name="name" required autocomplete="name"></label>
-    <label>E-mail (tilknyttet konto)<input name="email" type="email" id="userEmailInput" readonly style="background: #1a1a1a; color: #888;" placeholder="Log ind for at se e-mail"></label>
-    <label>Telefon<input name="phone" type="tel" autocomplete="tel"></label>
-    <label>Adresse<input name="address" required autocomplete="street-address"></label>
-    <div class="form-row"><label>Postnr.<input name="postal" required inputmode="numeric" autocomplete="postal-code"></label><label>By<input name="city" required autocomplete="address-level2"></label></div>
-    <label>Rabatkode <input name="coupon" placeholder="Fx MASTER2026"></label>
-    <label>Bemærkning<textarea name="notes" rows="2" placeholder="Fx kortets deklarerede værdi eller særlige oplysninger"></textarea></label>
-    <label class="consent"><input type="checkbox" required> <span>Jeg accepterer handelsbetingelserne og forstår, at behandlingstid og afsendelse afhænger af den valgte CGC-service og den samlede submission.</span></label>
-    <button class="btn pay" type="submit" id="submitOrderBtn">Gå til sikker betaling</button>
-    <p id="payMsg" class="fineprint"></p>
-</form></div></section>
+    <section class="trust">
+        <div><b>1+ kort</b><span>Du vælger antallet</span></div>
+        <div><b>Sikker proces</b><span>Tydelig håndtering fra start til slut</span></div>
+        <div><b>CGC submission</b><span>Vi står for indsendelsen</span></div>
+        <div><b>Dansk service</b><span>Hjælp under hele forløbet</span></div>
+    </section>
 
-<section class="section status-cta"><span class="eyebrow">FØLG DINE KORT</span><h2>Se hvor din grading er i processen</h2><p class="lead">Når du har bestilt, kan du følge ordren fra vi modtager dine kort, til de er sendt til CGC og retur til dig.</p><a class="btn" href="track.html">Spor min ordre</a></section>
-<section id="faq" class="section alt"><span class="eyebrow">FAQ</span><h2>Ofte stillede spørgsmål</h2><details><summary>Hvordan virker Poke Bro-medlemskabet?</summary><p>Medlemskabet koster 59 kr. pr. måned eller 599 kr. pr. år. Aktive medlemmer får Bulk til 249 kr. pr. kort og medlemsfordele. Abonnementet fortsætter, indtil det opsiges.</p></details><details><summary>Skal jeg sende 25 kort?</summary><p>Nej. Du kan sende helt ned til 1 kort. Vi samler kort fra flere kunder og sender til CGC, når den fælles Bulk-submission er klar.</p></details><details><summary>Hvornår bliver mine kort sendt til CGC?</summary><p>Bulk sendes samlet, når ordremængden passer til en fælles CGC-submission. Andre tiers håndteres efter den valgte service. Vi sigter mod et samlet forløb på højst 4 måneder, men CGC-, told- og transportforsinkelser ligger uden for vores direkte kontrol. Du får status undervejs.</p></details><details><summary>Hvilke kort kan bruge 279 kr.-prisen?</summary><p>Prisen er baseret på CGC Bulk, som på den aktuelle prisliste har en maksimal deklareret værdi på $500 pr. kort. Dyrere kort kræver en anden tier og aftales særskilt.</p></details><details><summary>Hvordan sender jeg mine kort sikkert?</summary><p>Efter bestilling får du konkrete pakkeinstruktioner. Brug altid en forsendelsesmetode, der passer til kortenes værdi.</p></details><details><summary>Er The Poke Bros CGC?</summary><p>Nej. The Poke Bros er en uafhængig indsendelsesservice. Selve gradingen udføres af CGC.</p></details></section>
-<section id="contact" class="section contact"><span class="eyebrow">KONTAKT</span><h2>Har du spørgsmål til din submission?</h2><p>Kontakt The Poke Bros på e-mail eller telefon.</p><div class="actions" style="justify-content:center"><a class="btn ghost" href="mailto:Thomaslydholmjob98@gmail.com">Thomaslydholmjob98@gmail.com</a><a class="btn ghost" href="tel:91626400">91 62 64 00</a></div></section></main>
+    <section id="how" class="section">
+        <span class="eyebrow">SÅDAN VIRKER DET</span>
+        <h2>Fra din samling til grading i 3 trin</h2>
+        <div class="cards">
+            <article><i>01</i><h3>Bestil</h3><p>Vælg hvor mange kort du ønsker at indsende og registrér dine oplysninger.</p></article>
+            <article><i>02</i><h3>Send til os</h3><p>Du modtager instruktioner til sikker pakning og forsendelse af dine kort.</p></article>
+            <article><i>03</i><h3>Vi klarer resten</h3><p>Vi samler submissionen, sender til CGC og returnerer dine slabs, når de er tilbage.</p></article>
+        </div>
+    </section>
 
-<footer><b>THE POKE BROS</b><span>Uafhængig grading-indsendelsesservice • thepokebros.com</span><small>Pokémon og CGC er varemærker tilhørende deres respektive ejere. The Poke Bros er ikke tilknyttet eller sponsoreret af Pokémon Company.</small></footer>
+    <section id="prices" class="section alt">
+        <span class="eyebrow">PRISER</span>
+        <h2>Vælg den CGC-service der passer til dit kort</h2>
+        <p class="lead">Du kan bestille fra 1 kort. Priserne nedenfor er The Poke Bros' servicepriser pr. kort og er sat med buffer til CGC-gebyr, fælles international fragt, forsikring, håndtering og valutakurs. Returfragt til kunden tillægges én gang pr. ordre.</p>
+        <div class="tier-grid">
+            <div class="tier featured"><h3>Bulk</h3><b>279 kr. / kort</b><p>CGC: $15,30 • maks. deklareret værdi $500 • CGC kræver 25 kort, men hos os kan du sende fra 1.</p></div>
+            <div class="tier"><h3>Economy</h3><b>299 kr. / kort</b><p>CGC: $18,00 • maks. deklareret værdi $1.000 pr. kort.</p></div>
+            <div class="tier"><h3>Standard</h3><b>499 kr. / kort</b><p>CGC: $49,50 • maks. deklareret værdi $3.000 pr. kort.</p></div>
+            <div class="tier"><h3>Express</h3><b>899 kr. / kort</b><p>CGC: $90,00 • maks. deklareret værdi $10.000 pr. kort.</p></div>
+            <div class="tier"><h3>WalkThrough</h3><b>2.199 kr. / kort</b><p>CGC: $270,00 • maks. deklareret værdi $100.000 pr. kort.</p></div>
+            <div class="tier"><h3>Unlimited Value</h3><b>Fra 2.199 kr. / kort</b><p>CGC: $270 + 0,9 % af FMV. Den variable afgift viderefaktureres efter kortets Fair Market Value.</p></div>
+        </div>
+        <p class="fineprint">Priserne er beregnet ud fra CGC-priserne, du har oplyst. Hvis CGC ændrer priser, valutakurs, declared value eller opgraderer et kort til en anden tier, kan en efterregulering være nødvendig.</p>
+    </section>
+
+    <section id="membership" class="section membership">
+        <span class="eyebrow">MEDLEMSKAB</span>
+        <h2>Bliv en Poke Bro</h2>
+        <p class="lead">Til dig der grader løbende. Som medlem får du en lavere Bulk-pris og ekstra medlemsfordele.</p>
+        <div class="member-card">
+            <div>
+                <span class="member-badge">POKE BRO MEMBER</span>
+                <h3>59 kr. / måned</h3>
+                <p class="annual">eller 599 kr. / år</p>
+                <ul>
+                    <li><b>Bulk til 249 kr. pr. kort</b> – spar 30 kr. pr. kort</li>
+                    <li>5 % medlemsrabat på øvrige faste CGC-tiers</li>
+                    <li>Mulighed for at samle egne returordrer, hvor det kan lade sig gøre</li>
+                    <li>Adgang til kommende medlemstilbud og fordele</li>
+                </ul>
+                <p class="fineprint">Medlemskabet fortsætter, indtil det opsiges.</p>
+            </div>
+            <div class="member-actions">
+                <strong>Vælg medlemskab</strong>
+                <button class="btn member-pay" data-plan="monthly">59 kr./md.</button>
+                <button class="btn ghost member-pay" data-plan="yearly">599 kr./år</button>
+                <small id="memberMsg"></small>
+            </div>
+        </div>
+    </section>
+
+    <section id="order" class="section">
+        <span class="eyebrow">BESTIL GRADING</span>
+        <h2>Bestil fra bare 1 kort</h2>
+        <p class="lead">Vælg CGC-service, antal kort og returfragt. Systemet beregner prisen automatisk.</p>
+        <div class="checkout-grid">
+            <div class="calculator">
+                <label for="tier">CGC-service</label>
+                <select id="tier">
+                    <option value="bulk">Bulk – 279 kr.</option>
+                    <option value="economy">Economy – 299 kr.</option>
+                    <option value="standard">Standard – 499 kr.</option>
+                    <option value="express">Express – 899 kr.</option>
+                    <option value="walkthrough">WalkThrough – 2.199 kr.</option>
+                    <option value="unlimited">Unlimited Value – fra 2.199 kr.</option>
+                </select>
+                <label for="shippingMethod">Returfragt</label>
+                <select id="shippingMethod">
+                    <option value="pakkeshop">Forsikret Pakkeshop (49 kr.)</option>
+                    <option value="hjemmelevering" selected>Forsikret Hjemmelevering (69 kr.)</option>
+                </select>
+                <label for="qty">Antal kort</label>
+                <div class="qtyrow">
+                    <button type="button" id="minus">−</button>
+                    <input id="qty" type="number" min="1" max="100" value="1">
+                    <button type="button" id="plus">+</button>
+                </div>
+                <div class="total"><span>Grading & service</span><strong id="gradingTotal">279 kr.</strong></div>
+                <div class="total"><span>Returfragt</span><strong id="shippingTotal">69 kr.</strong></div>
+                <div class="total grand"><span>I alt</span><strong id="total">348 kr.</strong></div>
+                <small id="tierNote">Bulk: maks. deklareret værdi $500 pr. kort. Du betaler selv forsendelsen af kortene til The Poke Bros.</small>
+            </div>
+            <form id="checkoutForm" class="order-form">
+                <div id="loginWarning" style="background: #2c1a1a; border: 1px solid #e63946; padding: 12px; border-radius: 6px; margin-bottom: 15px; display: none; text-align: center;">
+                    <p style="margin: 0; font-size: 14px; color: #ff4d5a;">Du skal være <a href="login.html" style="color: #fff; text-decoration: underline;">logget ind</a> for at bestille.</p>
+                </div>
+                <label>Navn<input name="name" required autocomplete="name"></label>
+                <label>E-mail (tilknyttet konto)<input name="email" type="email" id="userEmailInput" readonly style="background: #1a1a1a; color: #888;" placeholder="Log ind for at se e-mail"></label>
+                <label>Telefon<input name="phone" type="tel" autocomplete="tel"></label>
+                <label>Adresse<input name="address" required autocomplete="street-address"></label>
+                <div class="form-row">
+                    <label>Postnr.<input name="postal" required inputmode="numeric" autocomplete="postal-code"></label>
+                    <label>By<input name="city" required autocomplete="address-level2"></label>
+                </div>
+                <label>Rabatkode <input name="coupon" placeholder="Fx MASTER2026"></label>
+                <label>Bemærkning<textarea name="notes" rows="2" placeholder="Fx kortets deklarerede værdi eller særlige oplysninger"></textarea></label>
+                <label class="consent"><input type="checkbox" required> <span>Jeg accepterer handelsbetingelserne og forstår, at behandlingstid og afsendelse afhænger af den valgte CGC-service.</span></label>
+                <button class="btn pay" type="submit" id="submitOrderBtn">Gå til sikker betaling</button>
+                <p id="payMsg" class="fineprint"></p>
+            </form>
+        </div>
+    </section>
+
+    <section class="section status-cta">
+        <span class="eyebrow">FØLG DINE KORT</span>
+        <h2>Se hvor din grading er i processen</h2>
+        <p class="lead">Når du har bestilt, kan du følge ordren fra vi modtager dine kort, til de er sendt til CGC og retur til dig.</p>
+        <a class="btn" href="track.html">Spor min ordre</a>
+    </section>
+
+    <section id="faq" class="section alt">
+        <span class="eyebrow">FAQ</span>
+        <h2>Ofte stillede spørgsmål</h2>
+        <details><summary>Hvordan virker Poke Bro-medlemskabet?</summary><p>Medlemskabet koster 59 kr. pr. måned eller 599 kr. pr. år. Aktive medlemmer får Bulk til 249 kr. pr. kort.</p></details>
+        <details><summary>Skal jeg sende 25 kort?</summary><p>Nej. Du kan sende helt ned til 1 kort. Vi samler kort fra flere kunder og sender samlet til CGC.</p></details>
+        <details><summary>Hvordan sender jeg mine kort sikkert?</summary><p>Efter bestilling får du konkrete pakkeinstruktioner og pakkeseddel.</p></details>
+    </section>
+
+    <section id="contact" class="section contact">
+        <span class="eyebrow">KONTAKT</span>
+        <h2>Har du spørgsmål til din submission?</h2>
+        <p>Kontakt The Poke Bros på e-mail eller telefon.</p>
+        <div class="actions" style="justify-content:center">
+            <a class="btn ghost" href="mailto:Thomaslydholmjob98@gmail.com">Thomaslydholmjob98@gmail.com</a>
+            <a class="btn ghost" href="tel:91626400">91 62 64 00</a>
+        </div>
+    </section>
+</main>
+
+<footer>
+    <b>THE POKE BROS</b>
+    <span>Uafhængig grading-indsendelsesservice • thepokebros.com</span>
+    <small>Pokémon og CGC er varemærker tilhørende deres respektive ejere.</small>
+</footer>
 
 <!-- Stor, svævende & genert Master Ball -->
 <div id="easterEggContainer">
@@ -302,4 +444,9 @@ document.querySelectorAll('.member-pay').forEach(btn=>btn.addEventListener('clic
         location.href=j.url;
     }catch(e){msg.textContent=e.message;btn.disabled=false;}
 }));
-</script><div style="text-align:center;padding:24px;font-size:13px;opacity:.75"><a href="/handelsbetingelser.html">Handelsbetingelser</a> · <a href="/privatliv.html">Privatlivspolitik</a></div></body></html>
+</script>
+<div style="text-align:center;padding:24px;font-size:13px;opacity:.75">
+    <a href="/handelsbetingelser.html">Handelsbetingelser</a> · <a href="/privatliv.html">Privatlivspolitik</a>
+</div>
+</body>
+</html>
