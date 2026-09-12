@@ -81,7 +81,6 @@ async function initDb() {
             );
         `);
 
-        // Sørg for at id har en sekvens og at password_hash kolonnen findes
         await pool.query(`
             CREATE SEQUENCE IF NOT EXISTS users_id_seq;
             ALTER TABLE users ALTER COLUMN id SET DEFAULT nextval('users_id_seq');
@@ -137,6 +136,43 @@ app.post('/api/admin/login', (req, res) => {
     return res.status(401).json({ error: 'Forkert adgangskode' });
 });
 
+// ADMIN: HENT ALLE BRUGERE
+app.get('/api/admin/users', checkAdmin, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT id, name, email, phone, membership_active, membership_plan, created_at FROM users ORDER BY created_at DESC');
+        res.json({ users: result.rows });
+    } catch (e) {
+        res.status(500).json({ error: 'Kunne ikke hente brugere' });
+    }
+});
+
+// ADMIN: OPDATÉR BRUGER MEDLEMSKAB
+app.patch('/api/admin/users/:id', checkAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { membership_active, membership_plan } = req.body;
+    try {
+        await pool.query(
+            'UPDATE users SET membership_active = $1, membership_plan = $2 WHERE id = $3',
+            [membership_active, membership_plan || null, id]
+        );
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: 'Kunne ikke opdatere bruger' });
+    }
+});
+
+// ADMIN: SLET BRUGER
+app.delete('/api/admin/users/:id', checkAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+        await pool.query('DELETE FROM users WHERE id = $1', [id]);
+        res.json({ success: true });
+    } catch (e) {
+        res.status(500).json({ error: 'Kunne ikke slette bruger' });
+    }
+});
+
+// BRUGER AUTHENTICATION & KONTO DATA
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { name, email, phone, password } = req.body;
@@ -155,7 +191,6 @@ app.post('/api/auth/register', async (req, res) => {
         req.session.userId = user.id;
         res.json({ success: true, user });
     } catch (err) {
-        console.error('Register fejl:', err);
         res.status(500).json({ error: 'Kunne ikke oprette konto.' });
     }
 });
@@ -177,7 +212,6 @@ app.post('/api/auth/login', async (req, res) => {
         req.session.userId = user.id;
         res.json({ success: true });
     } catch (err) {
-        console.error('Login fejl:', err);
         res.status(500).json({ error: 'Kunne ikke logge ind.' });
     }
 });
