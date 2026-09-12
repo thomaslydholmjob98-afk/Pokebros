@@ -13,6 +13,25 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
+// Automatisk oprettelse af databasetabel til puljetæller
+async function initDb() {
+    try {
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS pool_status (
+                id INT PRIMARY KEY,
+                count INT NOT NULL DEFAULT 0
+            );
+        `);
+        await pool.query(`
+            INSERT INTO pool_status (id, count) VALUES (1, 12)
+            ON CONFLICT (id) DO NOTHING;
+        `);
+    } catch (err) {
+        console.error('DB Init Fejl:', err.message);
+    }
+}
+initDb();
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -35,7 +54,7 @@ function checkAdmin(req, res, next) {
     next();
 }
 
-// Dedikeret Admin Login Tjek
+// Admin Login
 app.post('/api/admin/login', (req, res) => {
     const { password } = req.body || {};
     if ((password || '').trim() === 'Lydholm9320') {
@@ -83,11 +102,11 @@ app.post('/api/ai-grade', async (req, res) => {
     }
 });
 
-// Pulje Status
+// Pulje Status API
 app.get('/api/pool-status', async (req, res) => {
     try {
         const result = await pool.query('SELECT count FROM pool_status WHERE id = 1');
-        const count = result.rows[0] ? result.rows[0].count : 0;
+        const count = result.rows[0] ? result.rows[0].count : 12;
         res.json({ count });
     } catch (e) {
         res.json({ count: 12 });
@@ -96,11 +115,25 @@ app.get('/api/pool-status', async (req, res) => {
 
 app.post('/api/admin/pool-status', checkAdmin, async (req, res) => {
     const { count } = req.body;
+    const numCount = parseInt(count, 10);
+    if (isNaN(numCount)) {
+        return res.status(400).json({ error: 'Ugyldigt antal' });
+    }
     try {
-        await pool.query('INSERT INTO pool_status (id, count) VALUES (1, $1) ON CONFLICT (id) DO UPDATE SET count = $1', [count]);
-        res.json({ success: true });
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS pool_status (
+                id INT PRIMARY KEY,
+                count INT NOT NULL DEFAULT 0
+            );
+        `);
+        await pool.query(
+            'INSERT INTO pool_status (id, count) VALUES (1, $1) ON CONFLICT (id) DO UPDATE SET count = $1',
+            [numCount]
+        );
+        res.json({ success: true, count: numCount });
     } catch (e) {
-        res.status(500).json({ error: 'Kunne ikke opdatere pulje' });
+        console.error('Fejl ved opdatering af pulje:', e);
+        res.status(500).json({ error: 'Kunne ikke opdatere pulje i databasen' });
     }
 });
 
@@ -108,28 +141,28 @@ app.post('/api/admin/pool-status', checkAdmin, async (req, res) => {
 app.get('/api/admin/orders', checkAdmin, async (req, res) => {
     try {
         let orders = { rows: [], rowCount: 0 };
-        let poolCards = 0;
+        let poolCards = 12;
         let members = 0;
         let paidRevenueDkk = 0;
 
         try {
             const ordersRes = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
             orders = ordersRes;
-        } catch (e) { console.error('Ordre tabel fejl:', e.message); }
+        } catch (e) {}
 
         try {
             const poolRes = await pool.query('SELECT count FROM pool_status WHERE id = 1');
-            poolCards = poolRes.rows[0]?.count || 0;
+            if (poolRes.rows[0]) poolCards = poolRes.rows[0].count;
         } catch (e) {}
 
         try {
             const membersRes = await pool.query('SELECT COUNT(*) FROM users WHERE membership_active = true');
-            members = membersRes.rows[0]?.count || 0;
+            if (membersRes.rows[0]) members = parseInt(membersRes.rows[0].count, 10);
         } catch (e) {}
 
         try {
             const revenueRes = await pool.query("SELECT SUM(total_dkk) FROM orders WHERE payment_status = 'paid'");
-            paidRevenueDkk = revenueRes.rows[0]?.sum || 0;
+            if (revenueRes.rows[0]?.sum) paidRevenueDkk = revenueRes.rows[0].sum;
         } catch (e) {}
 
         res.json({
