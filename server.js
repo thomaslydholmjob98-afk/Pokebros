@@ -16,7 +16,7 @@ async function sendWelcomeEmail(toEmail, userName) {
     try {
         await sendEmailViaBrevo({
             to: toEmail, subject: 'Velkommen til Poke Bros!',
-            html: `<div style="font-family: Arial, sans-serif; padding: 20px; color: #333;"><h2>Velkommen til Poke Bros, ${userName}!</h2><p>Mange tak fordi du oprettede en konto hos os.</p><p>Husk at du kan bruge koden <code>MASTER2026</code> til at få 10% rabat på din første ordre!</p><br><p>Med venlig hilsen,<br><strong>Poke Bros</strong></p></div>`
+            html: `<div style="font-family: Arial, sans-serif; padding: 20px; color: #333;"><h2>Velkommen til Poke Bros, ${userName}!</h2><p>Mange tak fordi du oprettede en konto hos os.</p><p>Husk at du kan bruge koden <code>MASTER2026</code> til at få 10% rabat på din første ordre (kræver login)!</p><br><p>Med venlig hilsen,<br><strong>Poke Bros</strong></p></div>`
         });
     } catch (err) { console.error('Fejl ved velkomstmail:', err); }
 }
@@ -66,7 +66,6 @@ app.post('/api/stripe-webhook',express.raw({type:'application/json'}),async(req,
 app.use(express.json({limit:'100kb'})); app.use(express.static(__dirname,{extensions:['html']}));
 const authLimiter=rateLimit({windowMs:15*60*1000,limit:30});
 
-// Hent puljestatus (tjekker om der er sat en manuel overstyring i site_settings, ellers tæller den fra ordrer)
 app.get('/api/pool-status', async (req, res) => {
     try {
         const manual = await db.query("SELECT value FROM site_settings WHERE key='manual_pool_count'");
@@ -76,21 +75,16 @@ app.get('/api/pool-status', async (req, res) => {
         const r = await db.query("SELECT SUM(qty) as total FROM orders WHERE status IN ('cards_received', 'awaiting_batch')");
         const count = Number(r.rows[0]?.total || 0);
         res.json({ count });
-    } catch (e) {
-        res.json({ count: 0 });
-    }
+    } catch (e) { res.json({ count: 0 }); }
 });
 
-// Admin-endpoint til at opdatere manuel puljestatus
 app.post('/api/admin/pool-status', async (req, res) => {
     if (!adminOK(req)) return res.status(401).json({ error: 'Forkert.' });
     try {
         const { count } = req.body;
         await db.query("INSERT INTO site_settings (key, value) VALUES ('manual_pool_count', $1) ON CONFLICT (key) DO UPDATE SET value = $1", [String(count)]);
         res.json({ ok: true });
-    } catch (e) {
-        res.status(500).json({ error: 'Kunne ikke opdatere puljen.' });
-    }
+    } catch (e) { res.status(500).json({ error: 'Fejl.' }); }
 });
 
 app.get('/api/products', async (req, res) => {
@@ -133,23 +127,37 @@ app.get('/api/account',async(req,res)=>{const u=await sessionUser(req);if(!u)ret
 app.post('/api/membership-checkout',async(req,res)=>{try{const u=await sessionUser(req);if(!u)return res.status(401).json({error:'Log ind.'});const plan=req.body?.plan==='yearly'?'yearly':'monthly',amount=plan==='yearly'?59900:5900,interval=plan==='yearly'?'year':'month',stripe=require('stripe')(process.env.STRIPE_SECRET_KEY),base=(process.env.PUBLIC_URL||`${req.protocol}://${req.get('host')}`).replace(/\/$/,'');const s=await stripe.checkout.sessions.create({mode:'subscription',customer_email:u.email,line_items:[{price_data:{currency:'dkk',product_data:{name:'Poke Bro medlemskab'},unit_amount:amount,recurring:{interval}},quantity:1}],metadata:{type:'membership',plan,userId:u.id},success_url:`${base}/account.html?membership=success`,cancel_url:`${base}/#membership`});res.json({url:s.url})}catch(e){res.status(500).json({error:'Fejl'})}});
 app.post('/api/confirm-membership',async(req,res)=>{try{const u=await sessionUser(req);if(!u)return res.status(401).json({error:'Log ind.'});const stripe=require('stripe')(process.env.STRIPE_SECRET_KEY),s=await stripe.checkout.sessions.retrieve(String(req.body?.sessionId||''));if(s.metadata?.userId===u.id)await activateMembership(u.email,s.metadata.plan,s.customer,s.subscription);res.json({user:publicUser((await db.query('SELECT * FROM users WHERE id=$1',[u.id])).rows[0])})}catch(e){res.status(500).json({error:'Fejl'})}});
 
+// CHECKOUT MED MASTERBALL-RABATKODE (Kræver login og kan kun bruges én gang pr. bruger)
 app.post('/api/checkout',async(req,res)=>{try{
     const u=await sessionUser(req),qty=Math.max(1,Math.min(100,Number(req.body.qty)||1));
     const {name,email,phone,address,postal,city,notes,coupon}=req.body;
     const tierKey=String(req.body.tier||'bulk').toLowerCase(),tier=TIERS[tierKey]||TIERS.bulk;
-    if(!name||!email||!address||!postal||!city)return res.status(400).json({error:'Udfyld felter.'});
-    if(!process.env.STRIPE_SECRET_KEY)return res.status(503).json({error:'Ikke aktiveret.'});
+    if(!name||!email||!address||!postal||!city)return res.status(400).json({error:'Udfyld venligst alle obligatoriske felter.'});
+    if(!process.env.STRIPE_SECRET_KEY)return res.status(503).json({error:'Betaling er ikke aktiveret.'});
 
     let unit=priceFor(tierKey,u);
     let discountApplied=false;
+
     if(coupon && coupon.trim().toUpperCase()==='MASTER2026') {
-        const prevOrders = await db.query('SELECT COUNT(*) c FROM orders WHERE customer_email=$1 OR user_id=$2', [String(email).trim().toLowerCase(), u?.id || 'none']);
-        if(Number(prevOrders.rows[0].c) === 0) { unit = Math.round(unit * 0.9); discountApplied = true; }
+        if (!u) {
+            return res.status(400).json({ error: 'Du skal være logget ind for at bruge Master Ball-rabatkoden (MASTER2026).' });
+        }
+        const usedCheck = await db.query('SELECT COUNT(*) c FROM orders WHERE user_id=$1 AND notes LIKE $2', [u.id, '%MASTER2026%']);
+        if (Number(usedCheck.rows[0].c) > 0) {
+            return res.status(400).json({ error: 'Du har allerede brugt Master Ball-koden (MASTER2026). Den kan kun bruges én gang.' });
+        }
+        const prevOrders = await db.query('SELECT COUNT(*) c FROM orders WHERE user_id=$1', [u.id]);
+        if (Number(prevOrders.rows[0].c) === 0) {
+            unit = Math.round(unit * 0.9);
+            discountApplied = true;
+        } else {
+            return res.status(400).json({ error: 'Master Ball-koden (MASTER2026) gælder kun på din allerførste ordre.' });
+        }
     }
 
     const gradingTotal = qty * unit;
     const id='TPB-'+new Date().toISOString().slice(0,10).replaceAll('-','')+'-'+crypto.randomBytes(3).toString('hex').toUpperCase();
-    const stripe=require('stripe')(process.env.STRIPE_SECRET_KEY),base=(process.env.PUBLIC_URL||`${req.protocol}://${req.get('host')}`).replace(/\/$/,'');
+    const stripe=require('stripe')(process.env.STRIPE_SECRET_KEY),base=(process.env.PUBLIC_URL||`${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
 
     await db.query('INSERT INTO orders(order_id,user_id,qty,tier,unit_price_dkk,member_price_applied,grading_dkk,return_shipping_dkk,total_dkk,customer_name,customer_email,customer_phone,customer_address,customer_postal,customer_city,notes) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)',[id,u?.id||null,qty,tierKey,unit,!!u?.membership_active,gradingTotal,RETURN_SHIPPING_DKK,gradingTotal+RETURN_SHIPPING_DKK,name,String(email).trim().toLowerCase(),phone||'',address,postal,city,(notes||'')+(discountApplied?' [Rabatkode MASTER2026 anvendt]':'')]);
     await timeline(id,'payment_pending');
@@ -158,14 +166,14 @@ app.post('/api/checkout',async(req,res)=>{try{
         mode:'payment', customer_email:email,
         line_items:[
             {price_data:{currency:'dkk',product_data:{name:`${tier.name} via The Poke Bros${discountApplied?' (10% rabat)':''}`},unit_amount:unit*100},quantity:qty},
-            {price_data:{currency:'dkk',product_data:{name:'Returfragt i Danmark'},unit_amount:RETURN_SHIPPING_DKK*100},quantity:1}
+            {price_data:{currency:'dkk',product_data:{name:'Forsikret returfragt i Danmark'},unit_amount:RETURN_SHIPPING_DKK*100},quantity:1}
         ],
         metadata:{orderId:id,qty:String(qty),tier:tierKey,userId:u?.id||''},
         success_url:`${base}/success.html?session_id={CHECKOUT_SESSION_ID}&order=${id}`, cancel_url:`${base}/#order`
     });
     await db.query('UPDATE orders SET stripe_session_id=$1 WHERE order_id=$2',[s.id,id]);
     res.json({url:s.url});
-}catch(e){console.error(e);res.status(500).json({error:'Fejl'})}});
+}catch(e){console.error(e);res.status(500).json({error:'Kunne ikke starte betaling.'})}});
 
 app.post('/api/confirm-payment',async(req,res)=>{try{const stripe=require('stripe')(process.env.STRIPE_SECRET_KEY),s=await stripe.checkout.sessions.retrieve(req.body.sessionId);if(s.metadata?.orderId!==req.body.orderId)return res.status(400).json({error:'Fejl'});if(s.payment_status==='paid'){const q=await db.query("UPDATE orders SET payment_status='paid',status=CASE WHEN status='payment_pending' THEN 'awaiting_cards' ELSE status END WHERE order_id=$1 RETURNING status",[req.body.orderId]);if(q.rows[0]?.status==='awaiting_cards')await timeline(req.body.orderId,'awaiting_cards','Betaling registreret.');}res.json(await publicOrder(req.body.orderId))}catch(e){res.status(500).json({error:'Fejl'})}});
 app.post('/api/track',async(req,res)=>{const id=String(req.body?.orderId||'').trim().toUpperCase(),email=String(req.body?.email||'').trim().toLowerCase(),r=await db.query('SELECT order_id FROM orders WHERE order_id=$1 AND customer_email=$2',[id,email]);if(!r.rows[0])return res.status(404).json({error:'Ikke fundet.'});res.json(await publicOrder(id))});
