@@ -13,19 +13,50 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// Automatisk oprettelse af databasetabel til puljetæller
+// Automatisk oprettelse af alle nødvendige databasetabeller
 async function initDb() {
     try {
+        // Tabeller for pulje, produkter, ordrer og brugere
         await pool.query(`
             CREATE TABLE IF NOT EXISTS pool_status (
                 id INT PRIMARY KEY,
                 count INT NOT NULL DEFAULT 0
             );
+
+            CREATE TABLE IF NOT EXISTS products (
+                id SERIAL PRIMARY KEY,
+                title VARCHAR(255) NOT NULL,
+                category VARCHAR(100),
+                price_dkk INT NOT NULL,
+                image_url TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS orders (
+                id SERIAL PRIMARY KEY,
+                order_id VARCHAR(50) UNIQUE NOT NULL,
+                customer_name VARCHAR(255),
+                customer_email VARCHAR(255),
+                customer_phone VARCHAR(50),
+                customer_address TEXT,
+                customer_postal VARCHAR(20),
+                customer_city VARCHAR(100),
+                qty INT,
+                tier VARCHAR(50),
+                shipping_method VARCHAR(50),
+                total_dkk INT,
+                payment_status VARCHAR(50) DEFAULT 'pending',
+                status VARCHAR(50) DEFAULT 'modtaget',
+                tracking_number VARCHAR(100),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
         `);
+
         await pool.query(`
             INSERT INTO pool_status (id, count) VALUES (1, 12)
             ON CONFLICT (id) DO NOTHING;
         `);
+        console.log('Database tabeller er initialiseret korrekt.');
     } catch (err) {
         console.error('DB Init Fejl:', err.message);
     }
@@ -45,7 +76,7 @@ app.use(session({
 
 app.use(express.static(__dirname));
 
-// Sikkerhedstjek for admin adgangskode
+// Sikkerhedstjek for admin adgangskode ('Lydholm9320')
 function checkAdmin(req, res, next) {
     const adminPass = (req.headers['x-admin-password'] || '').trim();
     if (adminPass !== 'Lydholm9320') {
@@ -120,12 +151,6 @@ app.post('/api/admin/pool-status', checkAdmin, async (req, res) => {
         return res.status(400).json({ error: 'Ugyldigt antal' });
     }
     try {
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS pool_status (
-                id INT PRIMARY KEY,
-                count INT NOT NULL DEFAULT 0
-            );
-        `);
         await pool.query(
             'INSERT INTO pool_status (id, count) VALUES (1, $1) ON CONFLICT (id) DO UPDATE SET count = $1',
             [numCount]
@@ -198,13 +223,31 @@ app.patch('/api/admin/orders/:id', checkAdmin, async (req, res) => {
     }
 });
 
-app.post('/api/admin/products', checkAdmin, async (req, res) => {
-    const { title, category, priceDkk, imageUrl } = req.body;
+// PRODUKT OPRETTELSE & VISNING
+app.get('/api/products', async (req, res) => {
     try {
-        await pool.query('INSERT INTO products (title, category, price_dkk, image_url) VALUES ($1, $2, $3, $4)', [title, category, priceDkk, imageUrl]);
+        const result = await pool.query('SELECT * FROM products ORDER BY created_at DESC');
+        res.json({ products: result.rows });
+    } catch (e) {
+        res.json({ products: [] });
+    }
+});
+
+app.post('/api/admin/products', checkAdmin, async (req, res) => {
+    const { title, category, priceDkk, imageUrl } = req.body || {};
+    if (!title || !priceDkk) {
+        return res.status(400).json({ error: 'Titel og pris er påkrævet' });
+    }
+    try {
+        const numericPrice = parseInt(priceDkk, 10);
+        await pool.query(
+            'INSERT INTO products (title, category, price_dkk, image_url) VALUES ($1, $2, $3, $4)',
+            [title, category || 'Diverse', numericPrice, imageUrl || '']
+        );
         res.json({ success: true });
     } catch (e) {
-        res.status(500).json({ error: 'Kunne ikke oprette produkt' });
+        console.error('Fejl ved oprettelse af produkt:', e);
+        res.status(500).json({ error: 'Kunne ikke oprette produkt i databasen: ' + e.message });
     }
 });
 
