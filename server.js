@@ -13,7 +13,7 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// Automatisk oprettelse af databasetabeller
+// Automatisk oprettelse og opdatering af databasetabeller
 async function initDb() {
     try {
         await pool.query(`
@@ -62,8 +62,12 @@ async function initDb() {
             );
         `);
 
-        // Sikr at image_url kan rumme base64-data
-        await pool.query(`ALTER TABLE products ALTER COLUMN image_url TYPE TEXT;`).catch(() => {});
+        // Sørg for at id har en sequence (auto-increment) og image_url er TEXT
+        await pool.query(`
+            CREATE SEQUENCE IF NOT EXISTS products_id_seq;
+            ALTER TABLE products ALTER COLUMN id SET DEFAULT nextval('products_id_seq');
+            ALTER TABLE products ALTER COLUMN image_url TYPE TEXT;
+        `).catch(() => {});
 
         await pool.query(`
             INSERT INTO pool_status (id, count) VALUES (1, 12)
@@ -320,7 +324,7 @@ app.patch('/api/admin/orders/:id', checkAdmin, async (req, res) => {
     }
 });
 
-// PRODUKT VISNING & OPRETTELSE (Viser den præcise databasefejl ved oprettelse)
+// PRODUKT VISNING & OPRETTELSE
 app.get('/api/products', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM products ORDER BY created_at DESC');
