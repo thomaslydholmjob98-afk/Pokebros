@@ -6,20 +6,14 @@
     <title>Shop | The Poke Bros</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .shop-container { max-width: 1100px; margin: 40px auto; padding: 0 20px; color: #fff; }
+        .shop-container { max-width: 1000px; margin: 40px auto; padding: 0 20px; color: #fff; }
         .shop-header { text-align: center; margin-bottom: 40px; }
         .shop-header h1 { color: #e63946; margin-bottom: 10px; }
-        .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; }
-        .product-card { background: #111318; border: 1px solid #222; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
-        .product-img { width: 100%; height: 220px; object-fit: cover; background: #1a1e29; }
-        .product-body { padding: 20px; display: flex; flex-direction: column; flex: 1; }
-        .product-category { font-size: 11px; font-weight: bold; color: #e63946; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
-        .product-title { font-size: 16px; font-weight: bold; color: #fff; margin: 0 0 10px 0; }
-        .product-price { font-size: 18px; font-weight: bold; color: #f1faee; margin-bottom: 15px; }
-        .product-footer { margin-top: auto; }
-        .buy-btn { width: 100%; padding: 12px; background: #e63946; color: #fff; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; text-align: center; }
-        .buy-btn:hover { background: #d90429; }
-        .buy-btn:disabled { background: #444; color: #888; cursor: not-allowed; }
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        .product-card { background: #111318; border: 1px solid #222; border-radius: 12px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: space-between; }
+        .product-card h3 { color: #fff; margin-top: 0; }
+        .price { font-size: 22px; font-weight: bold; color: #e63946; margin: 15px 0; }
+        .shop-msg { text-align: center; color: #aaa; margin-top: 50px; font-size: 16px; background: #111318; padding: 40px; border-radius: 12px; border: 1px solid #222; }
     </style>
 </head>
 <body>
@@ -28,86 +22,49 @@
         <nav>
             <a href="index.html">Forsiden</a>
             <a href="shop.html" style="color: #e63946;">Shop</a>
+            <a href="ai-grade.html">AI Pre-Grade</a>
+            <a href="selg.html">Sælg samling</a>
             <a href="track.html">Spor ordre</a>
-            <a href="account.html" id="accountLink">Min konto</a>
+            <a href="account.html">Min konto</a>
         </nav>
+        <a class="btn small" href="index.html#order">Bestil grading</a>
     </header>
 
     <main class="shop-container">
         <div class="shop-header">
             <h1>The Poke Bros Shop</h1>
-            <p>Køb lækre graderede slabs, sjældne enkeltkort og samletilbehør direkte fra vores lager.</p>
+            <p>Find lækre rå kort, forseglede produkter og eksklusive tilbud.</p>
         </div>
 
-        <div id="shopGrid" class="shop-grid">
-            <p style="text-align: center; color: #888; grid-column: 1 / -1;">Indlæser produkter...</p>
+        <div class="products-grid">
+            <!-- Eksempel produktkort - kan udvides eller hentes dynamisk -->
+            <div class="product-card">
+                <div>
+                    <h3>Poke Bros Medlemskab (Årligt)</h3>
+                    <p style="color: #aaa; font-size: 14px;">Få fast rabat på alle dine CGC-indsendelser og eksklusive fordele hele året.</p>
+                </div>
+                <div>
+                    <div class="price">199 kr. / år</div>
+                    <a href="account.html" class="btn" style="width: 100%; text-align: center; box-sizing: border-box; display: block;">Læs mere / Bliv medlem</a>
+                </div>
+            </div>
+
+            <div class="product-card">
+                <div>
+                    <h3>CGC Bulk Gradering (Pakke)</h3>
+                    <p style="color: #aaa; font-size: 14px;">Indsend dine kort i næste fællesforsendelse. Professionel og sikker håndtering.</p>
+                </div>
+                <div>
+                    <div class="price">Fra 279 kr.</div>
+                    <a href="index.html#order" class="btn" style="width: 100%; text-align: center; box-sizing: border-box; display: block;">Bestil Bulk →</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="shop-msg">
+            <h3>Flere varer på vej!</h3>
+            <p>Vi opdaterer løbende shoppen med rå Pokémon- og One Piece-kort samt lækkert tilbehør.</p>
         </div>
     </main>
-
-    <script>
-        let isLoggedIn = false;
-
-        async function checkAuthAndLoadShop() {
-            try {
-                const authRes = await fetch('/api/auth/me');
-                const authData = await authRes.json();
-                isLoggedIn = authData.loggedIn;
-
-                if (isLoggedIn) {
-                    document.getElementById('accountLink').textContent = 'Min konto';
-                } else {
-                    document.getElementById('accountLink').textContent = 'Log ind';
-                    document.getElementById('accountLink').href = 'login.html';
-                }
-
-                const res = await fetch('/api/products');
-                const products = await res.json();
-                const grid = document.getElementById('shopGrid');
-
-                if (!products || products.length === 0) {
-                    grid.innerHTML = '<p style="text-align: center; color: #888; grid-column: 1 / -1;">Ingen produkter til salg i øjeblikket.</p>';
-                    return;
-                }
-
-                grid.innerHTML = products.map(p => `
-                    <div class="product-card">
-                        <img src="${p.image_url || 'https://via.placeholder.com/300x220?text=The+Poke+Bros'}" alt="${p.title}" class="product-img">
-                        <div class="product-body">
-                            <span class="product-category">${p.category_label || p.category}</span>
-                            <h3 class="product-title">${p.title}</h3>
-                            <div class="product-price">${p.price_dkk.toLocaleString('da-DK')} kr. <span style="font-size: 12px; color: #888; font-weight: normal;">+ 69 kr. fragt</span></div>
-                            <div class="product-footer">
-                                ${isLoggedIn 
-                                    ? `<button class="buy-btn" onclick="buyProduct('${p.id}')">Køb nu</button>` 
-                                    : `<a href="login.html?next=shop" class="buy-btn" style="display:block; text-decoration:none;">Log ind for at købe</a>`
-                                }
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-
-            } catch (err) {
-                console.error(err);
-                document.getElementById('shopGrid').innerHTML = '<p style="text-align: center; color: #e63946; grid-column: 1 / -1;">Kunne ikke indhente shoppen.</p>';
-            }
-        }
-
-        async function buyProduct(productId) {
-            try {
-                const res = await fetch('/api/shop-checkout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ productId })
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Fejl ved køb');
-                location.href = data.url;
-            } catch (err) {
-                alert(err.message);
-            }
-        }
-
-        checkAuthAndLoadShop();
-    </script>
 </body>
 </html>
