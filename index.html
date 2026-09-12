@@ -6,32 +6,27 @@
         50% { transform: translateY(-15px); }
     }
     #easterEggContainer {
-        position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px;
+        position: fixed; bottom: 25px; right: 25px; width: 65px; height: 65px;
         z-index: 9999; 
         animation: floatMasterBall 3.5s ease-in-out infinite;
-        padding: 30px; /* Dette skaber et usynligt felt (en "aura") omkring bolden, så den reagerer, når musen er tæt på */
-        margin: -30px; /* Modvirker padding for at holde den præcise placering */
+        padding: 30px; 
+        margin: -30px; 
     }
     #pokeEasterEgg {
         width: 100%; height: 100%; position: relative;
-        background: linear-gradient(to bottom, #7b2cbf 0%, #7b2cbf 50%, #f0f0f0 50%, #f0f0f0 100%);
-        border-radius: 50%; border: 3px solid #1a1a1a; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         cursor: pointer; display: flex; align-items: center; justify-content: center;
-        transition: transform 0.4s ease-out; /* Sikrer at den flygter "blødt" og roligt */
+        transition: transform 0.4s ease-out;
+        filter: drop-shadow(0 5px 12px rgba(0,0,0,0.5));
     }
-    #pokeEasterEgg::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; box-shadow: inset 0 6px 12px rgba(255,255,255,0.4); pointer-events: none; }
-    .poke-belt { position: absolute; top: 50%; left: 0; width: 100%; height: 8px; background: #1a1a1a; transform: translateY(-50%); }
-    .poke-button { position: absolute; top: 50%; left: 50%; width: 18px; height: 18px; background: #fff; border: 3px solid #1a1a1a; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: inset 0 0 0 2px #ddd; z-index: 2; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #7b2cbf; }
+    #pokeEasterEgg:hover { transform: scale(1.15) rotate(10deg); }
 
     /* Master Ball regnvejr efter klik */
     @keyframes fall { 0% { transform: translateY(-60px) rotate(0deg); opacity: 1; } 100% { transform: translateY(105vh) rotate(360deg); opacity: 0; } }
     .falling-masterball {
-        position: fixed; top: -60px; width: 40px; height: 40px;
-        background: linear-gradient(to bottom, #7b2cbf 0%, #7b2cbf 50%, #f0f0f0 50%, #f0f0f0 100%);
-        border-radius: 50%; border: 2px solid #1a1a1a; box-shadow: 0 3px 10px rgba(0,0,0,0.4); z-index: 9998; pointer-events: none; animation: fall linear forwards;
+        position: fixed; top: -60px; width: 45px; height: 45px;
+        z-index: 9998; pointer-events: none; animation: fall linear forwards;
+        filter: drop-shadow(0 3px 8px rgba(0,0,0,0.4));
     }
-    .falling-masterball::before { content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 5px; background: #1a1a1a; transform: translateY(-50%); }
-    .falling-masterball::after { content: ''; position: absolute; top: 50%; left: 50%; width: 12px; height: 12px; background: #fff; border: 2px solid #1a1a1a; border-radius: 50%; transform: translate(-50%, -50%); z-index: 2; }
 </style>
 </head><body>
 <header><a class="brand" href="#">THE POKE BROS</a><nav><a href="#how">Sådan virker det</a><a href="#prices">Priser</a><a href="#membership">Bliv en Poke Bro</a><a href="shop.html">Shop</a><a href="/selg.html">Sælg din samling</a><a href="#faq">FAQ</a><a href="track.html">Spor ordre</a><a href="#contact">Kontakt</a><a href="account.html" id="accountLink">Min konto</a></nav><a class="btn small" href="#order">Bestil grading</a></header>
@@ -101,11 +96,29 @@
 
 <footer><b>THE POKE BROS</b><span>Uafhængig grading-indsendelsesservice • thepokebros.com</span><small>Pokémon og CGC er varemærker tilhørende deres respektive ejere. The Poke Bros er ikke tilknyttet eller sponsoreret af Pokémon Company.</small></footer>
 
-<!-- Svævende & Genert Master Ball -->
+<!-- Eksakt Nøjagtig Master Ball (SVG-baseret med genert flugt-effekt) -->
 <div id="easterEggContainer">
     <div id="pokeEasterEgg" onclick="triggerMasterBallRain()" title="Klik for en overraskelse!">
-        <div class="poke-belt"></div>
-        <div class="poke-button">M</div>
+        <svg viewBox="0 0 100 100" style="width: 100%; height: 100%; display: block;">
+            <!-- Hvid bund / ydre kant -->
+            <circle cx="50" cy="50" r="48" fill="#ffffff" stroke="#1a1a1a" stroke-width="4"/>
+            <!-- Lilla top -->
+            <path d="M 2 50 A 48 48 0 0 1 98 50 Z" fill="#7b2cbf"/>
+            <!-- Midterlinje -->
+            <line x1="2" y1="50" x2="98" y2="50" stroke="#1a1a1a" stroke-width="4"/>
+            <!-- Venstre lyserøde knop -->
+            <ellipse cx="28" cy="30" rx="15" ry="11" transform="rotate(-20 28 30)" fill="#ff66cc" stroke="#1a1a1a" stroke-width="3"/>
+            <ellipse cx="26" cy="28" rx="10" ry="6" transform="rotate(-20 26 28)" fill="#ff99ee" opacity="0.7"/>
+            <!-- Højre lyserøde knop -->
+            <ellipse cx="72" cy="30" rx="15" ry="11" transform="rotate(20 72 30)" fill="#ff66cc" stroke="#1a1a1a" stroke-width="3"/>
+            <ellipse cx="74" cy="28" rx="10" ry="6" transform="rotate(20 74 28)" fill="#ff99ee" opacity="0.7"/>
+            <!-- Hvidt M -->
+            <path d="M 37 41 L 43 25 L 50 36 L 57 25 L 63 41 L 58 41 L 53 31 L 50 36 L 47 31 L 42 41 Z" fill="#ffffff"/>
+            <!-- Center knap ydre -->
+            <circle cx="50" cy="50" r="13" fill="#1a1a1a"/>
+            <!-- Center knap inder -->
+            <circle cx="50" cy="50" r="7" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+        </svg>
     </div>
 </div>
 
@@ -118,7 +131,7 @@
 </div>
 
 <script>
-// "Genert" Master Ball - Skubber bolden stille væk, når musen kommer i nærheden
+// "Genert" Master Ball - Skubber bolden forsigtigt væk, når musen kommer i nærheden
 const eggContainer = document.getElementById('easterEggContainer');
 const egg = document.getElementById('pokeEasterEgg');
 
@@ -127,7 +140,6 @@ eggContainer.addEventListener('mousemove', (e) => {
     const x = e.clientX - rect.left - (rect.width / 2);
     const y = e.clientY - rect.top - (rect.height / 2);
     
-    // Beregner et blødt skub i modsat retning af musen (maks 15 pixels)
     const moveX = (x < 0 ? 15 : -15);
     const moveY = (y < 0 ? 15 : -15);
     
@@ -135,12 +147,10 @@ eggContainer.addEventListener('mousemove', (e) => {
 });
 
 eggContainer.addEventListener('mouseleave', () => {
-    // Falder roligt på plads igen
     egg.style.transform = `translate(0, 0) scale(1) rotate(0deg)`;
 });
 
 
-// Nedenunder ligger al den originale kode til systemet
 async function loadPoolStatus() {
     try {
         const res = await fetch('/api/pool-status');
@@ -195,8 +205,20 @@ function triggerMasterBallRain() {
     setTimeout(() => eggElem.style.transform = 'scale(1)', 200);
 
     for (let i = 0; i < 35; i++) {
-        const ball = document.createElement('div');
+        const ball = document.createElement('svg');
         ball.className = 'falling-masterball';
+        ball.innerHTML = `
+            <svg viewBox="0 0 100 100" style="width: 100%; height: 100%;">
+                <circle cx="50" cy="50" r="48" fill="#ffffff" stroke="#1a1a1a" stroke-width="4"/>
+                <path d="M 2 50 A 48 48 0 0 1 98 50 Z" fill="#7b2cbf"/>
+                <line x1="2" y1="50" x2="98" y2="50" stroke="#1a1a1a" stroke-width="4"/>
+                <ellipse cx="28" cy="30" rx="15" ry="11" transform="rotate(-20 28 30)" fill="#ff66cc" stroke="#1a1a1a" stroke-width="3"/>
+                <ellipse cx="72" cy="30" rx="15" ry="11" transform="rotate(20 72 30)" fill="#ff66cc" stroke="#1a1a1a" stroke-width="3"/>
+                <path d="M 37 41 L 43 25 L 50 36 L 57 25 L 63 41 L 58 41 L 53 31 L 50 36 L 47 31 L 42 41 Z" fill="#ffffff"/>
+                <circle cx="50" cy="50" r="13" fill="#1a1a1a"/>
+                <circle cx="50" cy="50" r="7" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
+            </svg>
+        `;
         ball.style.left = Math.random() * window.innerWidth + 'px';
         ball.style.animationDuration = (Math.random() * 2 + 1.5) + 's';
         ball.style.animationDelay = (Math.random() * 0.5) + 's';
