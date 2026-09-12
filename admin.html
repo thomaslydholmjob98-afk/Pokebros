@@ -272,6 +272,7 @@
         // BRUGER- OG MEDLEMSKABSHÅNDTERING
         async function loadAdminUsers() {
             const tbody = document.getElementById('adminUsersTableBody');
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888;">Henter brugere...</td></tr>';
             try {
                 const res = await fetch('/api/admin/users', { headers: { 'x-admin-password': adminPass } });
                 if (!res.ok) throw new Error('Kunne ikke hente brugere');
@@ -301,11 +302,11 @@
                         <td style="color: #888; font-size: 13px;">${new Date(u.created_at).toLocaleDateString('da-DK')}</td>
                         <td>
                             <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-                                <button onclick="toggleMembership(${u.id}, ${!u.membership_active})" class="btn small" style="background: ${u.membership_active ? '#ff4d5a' : '#2ec4b6'}; padding: 5px 8px; font-size: 11px; cursor: pointer;">
+                                <button type="button" onclick="toggleMembership(${u.id}, ${!u.membership_active})" class="btn small" style="background: ${u.membership_active ? '#ff4d5a' : '#2ec4b6'}; padding: 5px 8px; font-size: 11px; cursor: pointer;">
                                     ${u.membership_active ? 'Deaktivér' : 'Aktivér'}
                                 </button>
-                                <button onclick="updateUserPlan(${u.id})" class="btn small" style="background: #3a86ff; padding: 5px 8px; font-size: 11px; color: #fff; cursor: pointer;">Opdatér</button>
-                                <button onclick="deleteUser(${u.id})" class="btn ghost small" style="color: #ff4d5a; border-color: #ff4d5a; padding: 5px 8px; font-size: 11px; cursor: pointer;">Slet</button>
+                                <button type="button" onclick="updateUserPlan(${u.id})" class="btn small" style="background: #3a86ff; padding: 5px 8px; font-size: 11px; color: #fff; cursor: pointer;">Opdatér</button>
+                                <button type="button" onclick="deleteUser(${u.id})" class="btn ghost small" style="color: #ff4d5a; border-color: #ff4d5a; padding: 5px 8px; font-size: 11px; cursor: pointer;">Slet</button>
                             </div>
                         </td>
                     </tr>
@@ -491,7 +492,7 @@
                                     <option value="til salg" ${p.status !== 'solgt' ? 'selected' : ''}>Til salg</option>
                                     <option value="solgt" ${p.status === 'solgt' ? 'selected' : ''}>Solgt</option>
                                 </select>
-                                <button onclick="deleteProduct(${p.id})" class="btn ghost" style="padding: 6px 10px; color: #ff4d5a; border-color: #ff4d5a; cursor: pointer;">Slet</button>
+                                <button type="button" onclick="deleteProduct(${p.id})" class="btn ghost" style="padding: 6px 10px; color: #ff4d5a; border-color: #ff4d5a; cursor: pointer;">Slet</button>
                             </div>
                         </td>
                     </tr>
