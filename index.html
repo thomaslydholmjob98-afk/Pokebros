@@ -20,7 +20,7 @@
             margin: -40px; 
         }
         #pokeEasterEgg {
-            width: 100%; height: 100%; position: relative;
+            width: 85px; height: 85px; position: relative;
             cursor: pointer; display: flex; align-items: center; justify-content: center;
             transition: transform 0.4s ease-out;
             filter: drop-shadow(0 6px 16px rgba(0,0,0,0.6));
@@ -238,10 +238,10 @@
     <small>Pokémon og CGC er varemærker tilhørende deres respektive ejere.</small>
 </footer>
 
-<!-- Stor, svævende & genert Master Ball -->
+<!-- Stor, svævende & genert Master Ball med fastlåst størrelse -->
 <div id="easterEggContainer">
     <div id="pokeEasterEgg" onclick="triggerMasterBallRain()" title="Klik for en overraskelse!">
-        <svg viewBox="0 0 100 100" style="width: 100%; height: 100%; display: block;">
+        <svg viewBox="0 0 100 100" style="width: 85px; height: 85px; min-width: 85px; min-height: 85px; display: block;">
             <circle cx="50" cy="50" r="48" fill="#ffffff" stroke="#1a1a1a" stroke-width="4"/>
             <path d="M 2 50 A 48 48 0 0 1 98 50 Z" fill="#7b2cbf"/>
             <line x1="2" y1="50" x2="98" y2="50" stroke="#1a1a1a" stroke-width="4"/>
@@ -337,10 +337,10 @@ function triggerMasterBallRain() {
     setTimeout(() => eggElem.style.transform = 'scale(1)', 200);
 
     for (let i = 0; i < 35; i++) {
-        const ball = document.createElement('svg');
+        const ball = document.createElement('div');
         ball.className = 'falling-masterball';
         ball.innerHTML = `
-            <svg viewBox="0 0 100 100" style="width: 100%; height: 100%;">
+            <svg viewBox="0 0 100 100" style="width: 50px; height: 50px; display: block;">
                 <circle cx="50" cy="50" r="48" fill="#ffffff" stroke="#1a1a1a" stroke-width="4"/>
                 <path d="M 2 50 A 48 48 0 0 1 98 50 Z" fill="#7b2cbf"/>
                 <line x1="2" y1="50" x2="98" y2="50" stroke="#1a1a1a" stroke-width="4"/>
