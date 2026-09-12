@@ -13,7 +13,7 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// Automatisk oprettelse af alle nødvendige databasetabeller
+// Automatisk oprettelse af databasetabeller
 async function initDb() {
     try {
         await pool.query(`
@@ -104,17 +104,67 @@ app.post('/api/admin/login', (req, res) => {
     return res.status(401).json({ error: 'Forkert adgangskode' });
 });
 
-// SÆLG DIN SAMLING ENDPOINT
+// AFSENDELSE AF MAIL VIA BREVO REST API
+async function sendBrevoEmail({ name, email, phone, details, expectedPrice }) {
+    const brevoApiKey = process.env.BREVO_API_KEY;
+    if (!brevoApiKey) {
+        console.log('BREVO_API_KEY mangler i miljøvariabler. Mail blev ikke afsendt.');
+        return;
+    }
+
+    const recipientEmail = 'thomaslydholmjob98@gmail.com';
+
+    try {
+        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: {
+                'accept': 'application/json',
+                'api-key': brevoApiKey,
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+                sender: { name: 'The Poke Bros Platform', email: recipientEmail },
+                to: [{ email: recipientEmail, name: 'Thomas Lydholm' }],
+                subject: `🔥 Ny Salgshenvendelse fra ${name || 'Kunde'}`,
+                htmlContent: `
+                    <h2>Ny henvendelse: Sælg din samling</h2>
+                    <p><b>Navn:</b> ${name || '-'}</p>
+                    <p><b>E-mail:</b> <a href="mailto:${email}">${email || '-'}</a></p>
+                    <p><b>Telefon:</b> ${phone || '-'}</p>
+                    <p><b>Forventet pris:</b> ${expectedPrice || '-'}</p>
+                    <hr>
+                    <h3>Beskrivelse af samlingen:</h3>
+                    <p style="white-space: pre-wrap; background: #f4f4f4; padding: 15px; border-radius: 5px;">${details || '-'}</p>
+                `
+            })
+        });
+
+        if (!response.ok) {
+            const errBody = await response.text();
+            console.error('Brevo API Fejl:', errBody);
+        } else {
+            console.log('E-mail sendt succesfuldt via Brevo API!');
+        }
+    } catch (err) {
+        console.error('Kunne ikke sende e-mail via Brevo:', err.message);
+    }
+}
+
+// SÆLG DIN SAMLING ENDPOINTS
 const handleSellRequest = async (req, res) => {
     try {
         const { name, email, phone, details, description, expectedPrice, price } = req.body || {};
         const textDetails = details || description || '';
         const priceValue = expectedPrice || price || '';
 
+        // 1. Gem henvendelsen i databasen
         await pool.query(
             'INSERT INTO sell_requests (name, email, phone, details, expected_price) VALUES ($1, $2, $3, $4, $5)',
             [name || '', email || '', phone || '', textDetails, priceValue]
         );
+
+        // 2. Afsend e-mail notifikation via Brevo
+        sendBrevoEmail({ name, email, phone, details: textDetails, expectedPrice: priceValue });
 
         res.json({ success: true, message: 'Mange tak! Din henvendelse er modtaget. Vi vender tilbage inden for 24 timer.' });
     } catch (err) {
@@ -127,7 +177,17 @@ app.post('/api/sell', handleSellRequest);
 app.post('/api/sell-collection', handleSellRequest);
 app.post('/api/contact/sell', handleSellRequest);
 
-// AI Kort-Vurdering
+// HENT SALGSHENVENDELSER TIL ADMIN
+app.get('/api/admin/sell-requests', checkAdmin, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM sell_requests ORDER BY created_at DESC');
+        res.json({ requests: result.rows });
+    } catch (e) {
+        res.status(500).json({ error: 'Kunne ikke hente salgshenvendelser' });
+    }
+});
+
+// AI KORT-VURDERING (PRE-GRADE)
 app.post('/api/ai-grade', async (req, res) => {
     try {
         const { imageBase64, cardName } = req.body || {};
@@ -166,7 +226,7 @@ app.post('/api/ai-grade', async (req, res) => {
     }
 });
 
-// Pulje Status API
+// PULJE STATUS API
 app.get('/api/pool-status', async (req, res) => {
     try {
         const result = await pool.query('SELECT count FROM pool_status WHERE id = 1');
@@ -190,12 +250,11 @@ app.post('/api/admin/pool-status', checkAdmin, async (req, res) => {
         );
         res.json({ success: true, count: numCount });
     } catch (e) {
-        console.error('Fejl ved opdatering af pulje:', e);
         res.status(500).json({ error: 'Kunne ikke opdatere pulje i databasen' });
     }
 });
 
-// Admin Dashboard Data
+// ADMIN DASHBOARD DATA
 app.get('/api/admin/orders', checkAdmin, async (req, res) => {
     try {
         let orders = { rows: [], rowCount: 0 };
@@ -256,7 +315,7 @@ app.patch('/api/admin/orders/:id', checkAdmin, async (req, res) => {
     }
 });
 
-// Produkt Visning & Oprettelse
+// PRODUKT VISNING & OPRETTELSE
 app.get('/api/products', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM products ORDER BY created_at DESC');
@@ -279,12 +338,11 @@ app.post('/api/admin/products', checkAdmin, async (req, res) => {
         );
         res.json({ success: true });
     } catch (e) {
-        console.error('Fejl ved oprettelse af produkt:', e);
-        res.status(500).json({ error: 'Kunne ikke oprette produkt i databasen: ' + e.message });
+        res.status(500).json({ error: 'Kunne ikke oprette produkt i databasen' });
     }
 });
 
-// Checkout
+// CHECKOUT
 app.post('/api/checkout', async (req, res) => {
     try {
         const { name, email, phone, address, postal, city, qty, tier, shippingMethod, notes, coupon } = req.body;
