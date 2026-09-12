@@ -1,5 +1,40 @@
 const express=require('express'),path=require('path'),crypto=require('crypto'),helmet=require('helmet'),rateLimit=require('express-rate-limit');
 const {Pool}=require('pg'); const app=express(); const PORT=process.env.PORT||3000;
+const nodemailer = require('nodemailer');
+
+// Opret transporter ud fra variablerne på Render
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+    }
+});
+
+// Hjælpefunktion til at sende velkomstmail
+async function sendWelcomeEmail(toEmail, userName) {
+    try {
+        await transporter.sendMail({
+            from: process.env.EMAIL_FROM || 'Poke Bros <noreply@thepokebros.com>',
+            to: toEmail,
+            subject: 'Velkommen til Poke Bros!',
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                    <h2>Velkommen til Poke Bros, ${userName}!</h2>
+                    <p>Mange tak fordi du oprettede en konto hos os.</p>
+                    <p>Du kan til enhver tid logge ind og se din konto på <a href="https://www.thepokebros.com/account.html">thepokebros.com</a>.</p>
+                    <br>
+                    <p>Med venlig hilsen,<br><strong>Poke Bros</strong></p>
+                </div>
+            `
+        });
+        console.log(`Velkomstmail sendt til ${toEmail}`);
+    } catch (err) {
+        console.error('Fejl ved afsendelse af e-mail:', err);
+    }
+}
+
 if(!process.env.DATABASE_URL) throw new Error('DATABASE_URL mangler');
 const db=new Pool({connectionString:process.env.DATABASE_URL,ssl:process.env.DB_SSL==='false'?false:{rejectUnauthorized:false}});
 const TIERS={bulk:{name:'CGC Bulk grading',price:279},economy:{name:'CGC Economy grading',price:299},standard:{name:'CGC Standard grading',price:499},express:{name:'CGC Express grading',price:899},walkthrough:{name:'CGC WalkThrough grading',price:2199},unlimited:{name:'CGC Unlimited Value grading',price:2199}};
@@ -22,7 +57,14 @@ async function activateMembership(email,plan,cust,sub){await db.query('UPDATE us
 app.post('/api/stripe-webhook',express.raw({type:'application/json'}),async(req,res)=>{try{if(!process.env.STRIPE_SECRET_KEY||!process.env.STRIPE_WEBHOOK_SECRET)return res.status(503).send('Stripe ikke konfigureret');const stripe=require('stripe')(process.env.STRIPE_SECRET_KEY);const ev=stripe.webhooks.constructEvent(req.body,req.headers['stripe-signature'],process.env.STRIPE_WEBHOOK_SECRET);if(ev.type==='checkout.session.completed'){const s=ev.data.object;if(s.metadata?.type==='membership')await activateMembership(s.customer_details?.email||s.customer_email,s.metadata?.plan||'monthly',s.customer,s.subscription);else if(s.metadata?.orderId){const status=s.payment_status==='paid'?'paid':s.payment_status;const q=await db.query('UPDATE orders SET payment_status=$1,stripe_session_id=$2,status=CASE WHEN $1=\'paid\' AND status=\'payment_pending\' THEN \'awaiting_cards\' ELSE status END WHERE order_id=$3 RETURNING status',[status,s.id,s.metadata.orderId]);if(q.rows[0]?.status==='awaiting_cards')await timeline(s.metadata.orderId,'awaiting_cards','Betaling registreret.')}}if(ev.type==='customer.subscription.deleted')await db.query('UPDATE users SET membership_active=FALSE,membership_ended_at=NOW() WHERE stripe_subscription_id=$1',[ev.data.object.id]);res.json({received:true})}catch(e){console.error(e);res.status(400).send('Webhook Error')}});
 app.use(express.json({limit:'100kb'})); app.use(express.static(__dirname,{extensions:['html']}));
 const authLimiter=rateLimit({windowMs:15*60*1000,limit:30});
-app.post('/api/auth/register',authLimiter,async(req,res)=>{try{const name=String(req.body?.name||'').trim(),email=String(req.body?.email||'').trim().toLowerCase(),password=String(req.body?.password||'');if(name.length<2||!email.includes('@')||password.length<10)return res.status(400).json({error:'Brug navn, gyldig e-mail og mindst 10 tegn i adgangskoden.'});const id='USR-'+crypto.randomBytes(6).toString('hex');const r=await db.query('INSERT INTO users(id,name,email,phone,password_hash) VALUES($1,$2,$3,$4,$5) RETURNING *',[id,name,email,String(req.body?.phone||''),scryptHash(password)]);await setSession(res,id);res.json({user:publicUser(r.rows[0])})}catch(e){if(e.code==='23505')return res.status(409).json({error:'Der findes allerede en konto med den e-mail.'});console.error(e);res.status(500).json({error:'Kontoen kunne ikke oprettes.'})}});
+
+app.post('/api/auth/register',authLimiter,async(req,res)=>{try{const name=String(req.body?.name||'').trim(),email=String(req.body?.email||'').trim().toLowerCase(),password=String(req.body?.password||'');if(name.length<2||!email.includes('@')||password.length<10)return res.status(400).json({error:'Brug navn, gyldig e-mail og mindst 10 tegn i adgangskoden.'});const id='USR-'+crypto.randomBytes(6).toString('hex');const r=await db.query('INSERT INTO users(id,name,email,phone,password_hash) VALUES($1,$2,$3,$4,$5) RETURNING *',[id,name,email,String(req.body?.phone||''),scryptHash(password)]);await setSession(res,id);
+
+// Send automatisk velkomstmail
+sendWelcomeEmail(email, name);
+
+res.json({user:publicUser(r.rows[0])})}catch(e){if(e.code==='23505')return res.status(409).json({error:'Der findes allerede en konto med den e-mail.'});console.error(e);res.status(500).json({error:'Kontoen kunne ikke oprettes.'})}});
+
 app.post('/api/auth/login',authLimiter,async(req,res)=>{const email=String(req.body?.email||'').trim().toLowerCase(),password=String(req.body?.password||'');const r=await db.query('SELECT * FROM users WHERE email=$1',[email]);const u=r.rows[0];if(!u||!verifyPassword(password,u.password_hash))return res.status(401).json({error:'Forkert e-mail eller adgangskode.'});await setSession(res,u.id);res.json({user:publicUser(u)})});
 app.post('/api/auth/logout',async(req,res)=>{await clearSession(req,res);res.json({ok:true})}); app.get('/api/auth/me',async(req,res)=>{const u=await sessionUser(req);res.json({loggedIn:!!u,user:u?publicUser(u):null})});
 app.get('/api/account',async(req,res)=>{const u=await sessionUser(req);if(!u)return res.status(401).json({error:'Log ind for at se din konto.'});const r=await db.query('SELECT order_id FROM orders WHERE user_id=$1 OR customer_email=$2 ORDER BY created_at DESC',[u.id,u.email]);const orders=[];for(const x of r.rows)orders.push(await publicOrder(x.order_id));res.json({user:publicUser(u),orders,pricing:Object.fromEntries(Object.keys(TIERS).map(k=>[k,priceFor(k,u)]))})});
