@@ -16,7 +16,7 @@ async function sendWelcomeEmail(toEmail, userName) {
     try {
         await sendEmailViaBrevo({
             to: toEmail, subject: 'Velkommen til Poke Bros!',
-            html: `<div style="font-family: Arial, sans-serif; padding: 20px; color: #333;"><h2>Velkommen til Poke Bros, ${userName}!</h2><p>Mange tak fordi du oprettede en konto hos os.</p><p>Husk at du kan bruge koden <code>MASTER2026</code> til at få 10% rabat på din første ordre (kræver login)!</p><br><p>Med venlig hilsen,<br><strong>Poke Bros</strong></p></div>`
+            html: `<div style="font-family: Arial, sans-serif; padding: 20px; color: #333;"><h2>Velkommen til Poke Bros, ${userName}!</h2><p>Mange tak fordi du oprettede en konto hos os.</p><p>Husk at du kan bruge koden <code>MASTER2026</code> til at få 10% rabat på din første ordre!</p><br><p>Med venlig hilsen,<br><strong>Poke Bros</strong></p></div>`
         });
     } catch (err) { console.error('Fejl ved velkomstmail:', err); }
 }
@@ -87,7 +87,6 @@ app.post('/api/admin/pool-status', async (req, res) => {
     } catch (e) { res.status(500).json({ error: 'Fejl.' }); }
 });
 
-// Offentlig rute til pakkeseddel
 app.get('/api/track-public/:id', async (req, res) => {
     try {
         const id = String(req.params.id || '').trim().toUpperCase();
@@ -101,9 +100,7 @@ app.get('/api/track-public/:id', async (req, res) => {
             customer_email: o.customer_email, customer_address: o.customer_address,
             customer_postal: o.customer_postal, customer_city: o.customer_city, notes: o.notes, timeline: t.rows
         });
-    } catch (e) {
-        res.status(500).json({ error: 'Fejl ved hentning af ordre.' });
-    }
+    } catch (e) { res.status(500).json({ error: 'Fejl ved hentning af ordre.' }); }
 });
 
 app.get('/api/products', async (req, res) => {
@@ -146,20 +143,23 @@ app.get('/api/account',async(req,res)=>{const u=await sessionUser(req);if(!u)ret
 app.post('/api/membership-checkout',async(req,res)=>{try{const u=await sessionUser(req);if(!u)return res.status(401).json({error:'Log ind.'});const plan=req.body?.plan==='yearly'?'yearly':'monthly',amount=plan==='yearly'?59900:5900,interval=plan==='yearly'?'year':'month',stripe=require('stripe')(process.env.STRIPE_SECRET_KEY),base=(process.env.PUBLIC_URL||`${req.protocol}://${req.get('host')}`).replace(/\/$/,'');const s=await stripe.checkout.sessions.create({mode:'subscription',customer_email:u.email,line_items:[{price_data:{currency:'dkk',product_data:{name:'Poke Bro medlemskab'},unit_amount:amount,recurring:{interval}},quantity:1}],metadata:{type:'membership',plan,userId:u.id},success_url:`${base}/account.html?membership=success`,cancel_url:`${base}/#membership`});res.json({url:s.url})}catch(e){res.status(500).json({error:'Fejl'})}});
 app.post('/api/confirm-membership',async(req,res)=>{try{const u=await sessionUser(req);if(!u)return res.status(401).json({error:'Log ind.'});const stripe=require('stripe')(process.env.STRIPE_SECRET_KEY),s=await stripe.checkout.sessions.retrieve(String(req.body?.sessionId||''));if(s.metadata?.userId===u.id)await activateMembership(u.email,s.metadata.plan,s.customer,s.subscription);res.json({user:publicUser((await db.query('SELECT * FROM users WHERE id=$1',[u.id])).rows[0])})}catch(e){res.status(500).json({error:'Fejl'})}});
 
+// CHECKOUT - KRÆVER LOGIN
 app.post('/api/checkout',async(req,res)=>{try{
-    const u=await sessionUser(req),qty=Math.max(1,Math.min(100,Number(req.body.qty)||1));
-    const {name,email,phone,address,postal,city,notes,coupon}=req.body;
+    const u=await sessionUser(req);
+    if (!u) {
+        return res.status(401).json({ error: 'Du skal være oprettet og logget ind for at gennemføre en bestilling.' });
+    }
+
+    const qty=Math.max(1,Math.min(100,Number(req.body.qty)||1));
+    const {name,phone,address,postal,city,notes,coupon}=req.body;
     const tierKey=String(req.body.tier||'bulk').toLowerCase(),tier=TIERS[tierKey]||TIERS.bulk;
-    if(!name||!email||!address||!postal||!city)return res.status(400).json({error:'Udfyld venligst alle obligatoriske felter.'});
+    if(!name||!address||!postal||!city)return res.status(400).json({error:'Udfyld venligst alle obligatoriske felter.'});
     if(!process.env.STRIPE_SECRET_KEY)return res.status(503).json({error:'Betaling er ikke aktiveret.'});
 
     let unit=priceFor(tierKey,u);
     let discountApplied=false;
 
     if(coupon && coupon.trim().toUpperCase()==='MASTER2026') {
-        if (!u) {
-            return res.status(400).json({ error: 'Du skal være logget ind for at bruge Master Ball-rabatkoden (MASTER2026).' });
-        }
         const usedCheck = await db.query('SELECT COUNT(*) c FROM orders WHERE user_id=$1 AND notes LIKE $2', [u.id, '%MASTER2026%']);
         if (Number(usedCheck.rows[0].c) > 0) {
             return res.status(400).json({ error: 'Du har allerede brugt Master Ball-koden (MASTER2026). Den kan kun bruges én gang.' });
@@ -177,16 +177,16 @@ app.post('/api/checkout',async(req,res)=>{try{
     const id='TPB-'+new Date().toISOString().slice(0,10).replaceAll('-','')+'-'+crypto.randomBytes(3).toString('hex').toUpperCase();
     const stripe=require('stripe')(process.env.STRIPE_SECRET_KEY),base=(process.env.PUBLIC_URL||`${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
 
-    await db.query('INSERT INTO orders(order_id,user_id,qty,tier,unit_price_dkk,member_price_applied,grading_dkk,return_shipping_dkk,total_dkk,customer_name,customer_email,customer_phone,customer_address,customer_postal,customer_city,notes) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)',[id,u?.id||null,qty,tierKey,unit,!!u?.membership_active,gradingTotal,RETURN_SHIPPING_DKK,gradingTotal+RETURN_SHIPPING_DKK,name,String(email).trim().toLowerCase(),phone||'',address,postal,city,(notes||'')+(discountApplied?' [Rabatkode MASTER2026 anvendt]':'')]);
+    await db.query('INSERT INTO orders(order_id,user_id,qty,tier,unit_price_dkk,member_price_applied,grading_dkk,return_shipping_dkk,total_dkk,customer_name,customer_email,customer_phone,customer_address,customer_postal,customer_city,notes) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)',[id,u.id,qty,tierKey,unit,!!u?.membership_active,gradingTotal,RETURN_SHIPPING_DKK,gradingTotal+RETURN_SHIPPING_DKK,name,u.email,phone||'',address,postal,city,(notes||'')+(discountApplied?' [Rabatkode MASTER2026 anvendt]':'')]);
     await timeline(id,'payment_pending');
 
     const s=await stripe.checkout.sessions.create({
-        mode:'payment', customer_email:email,
+        mode:'payment', customer_email:u.email,
         line_items:[
             {price_data:{currency:'dkk',product_data:{name:`${tier.name} via The Poke Bros${discountApplied?' (10% rabat)':''}`},unit_amount:unit*100},quantity:qty},
             {price_data:{currency:'dkk',product_data:{name:'Forsikret returfragt i Danmark'},unit_amount:RETURN_SHIPPING_DKK*100},quantity:1}
         ],
-        metadata:{orderId:id,qty:String(qty),tier:tierKey,userId:u?.id||''},
+        metadata:{orderId:id,qty:String(qty),tier:tierKey,userId:u.id},
         success_url:`${base}/success.html?session_id={CHECKOUT_SESSION_ID}&order=${id}`, cancel_url:`${base}/#order`
     });
     await db.query('UPDATE orders SET stripe_session_id=$1 WHERE order_id=$2',[s.id,id]);
