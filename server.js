@@ -2,14 +2,21 @@ const express=require('express'),path=require('path'),crypto=require('crypto'),h
 const {Pool}=require('pg'); const app=express(); const PORT=process.env.PORT||3000;
 const nodemailer = require('nodemailer');
 
-// Opret transporter ud fra variablerne på Render
+// Opret transporter med eksplicitte TLS- og timeout-indstillinger
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
+    host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
     port: Number(process.env.SMTP_PORT || 587),
+    secure: false, // Port 587 bruger STARTTLS
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
-    }
+    },
+    tls: {
+        rejectUnauthorized: false
+    },
+    connectionTimeout: 10000, // 10 sekunders timeout i stedet for at hænge
+    greetingTimeout: 5000,
+    socketTimeout: 10000
 });
 
 // Hjælpefunktion til at sende velkomstmail
