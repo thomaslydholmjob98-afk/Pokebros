@@ -38,6 +38,22 @@
     </div>
 </section>
 
+<!-- Hurtig Ordre-Søger på Forsiden -->
+<section style="background: #0d0f12; padding: 40px 20px; border-bottom: 1px solid #222; text-align: center;">
+    <div style="max-width: 600px; margin: 0 auto;">
+        <span class="eyebrow" style="color: #e63946; font-weight: bold; font-size: 12px; letter-spacing: 1px;">HURTIG SPORING</span>
+        <h3 style="margin: 8px 0; font-size: 22px; color: #fff;">Hvor er dine kort?</h3>
+        <p style="color: #aaa; font-size: 14px; margin-bottom: 20px;">Tjek status på din submission med det samme ved at indtaste dit ordrenummer og e-mail.</p>
+        
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+            <input type="text" id="homeOrderId" placeholder="Ordrenummer (fx TPB-...)" style="flex: 1; min-width: 200px; padding: 12px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 6px; text-transform: uppercase;">
+            <input type="email" id="homeEmail" placeholder="Din e-mailadresse" style="flex: 1; min-width: 200px; padding: 12px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 6px;">
+            <button onclick="homeTrackOrder()" class="btn" style="padding: 12px 24px;">Søg</button>
+        </div>
+        <div id="homeTrackResult" style="margin-top: 20px; text-align: left; display: none; background: #1a1e29; padding: 20px; border-radius: 8px; border: 1px solid #333; color: #fff;"></div>
+    </div>
+</section>
+
 <section class="trust"><div><b>1+ kort</b><span>Du vælger antallet</span></div><div><b>Sikker proces</b><span>Tydelig håndtering fra start til slut</span></div><div><b>CGC submission</b><span>Vi står for indsendelsen</span></div><div><b>Dansk service</b><span>Hjælp under hele forløbet</span></div></section>
 <section id="how" class="section"><span class="eyebrow">SÅDAN VIRKER DET</span><h2>Fra din samling til grading i 3 trin</h2><div class="cards"><article><i>01</i><h3>Bestil</h3><p>Vælg hvor mange kort du ønsker at indsende og registrér dine oplysninger.</p></article><article><i>02</i><h3>Send til os</h3><p>Du modtager instruktioner til sikker pakning og forsendelse af dine kort.</p></article><article><i>03</i><h3>Vi klarer resten</h3><p>Vi samler submissionen, sender til CGC og returnerer dine slabs, når de er tilbage.</p></article></div></section>
 <section id="prices" class="section alt"><span class="eyebrow">PRISER</span><h2>Vælg den CGC-service der passer til dit kort</h2><p class="lead">Du kan bestille fra 1 kort. Priserne nedenfor er The Poke Bros' servicepriser pr. kort og er sat med buffer til CGC-gebyr, fælles international fragt, forsikring, håndtering og valutakurs. Returfragt til kunden tillægges én gang pr. ordre.</p><div class="tier-grid">
@@ -50,7 +66,8 @@
 </div><p class="fineprint">Priserne er beregnet ud fra CGC-priserne, du har oplyst. Hvis CGC ændrer priser, valutakurs, declared value eller opgraderer et kort til en anden tier, kan en efterregulering være nødvendig. Forsendelser håndteres med forsikring efter de valgte transportvilkår.</p></section>
 <section id="membership" class="section membership"><span class="eyebrow">MEDLEMSKAB</span><h2>Bliv en Poke Bro</h2><p class="lead">Til dig der grader løbende. Som medlem får du en lavere Bulk-pris og ekstra medlemsfordele.</p><div class="member-card"><div><span class="member-badge">POKE BRO MEMBER</span><h3>59 kr. / måned</h3><p class="annual">eller 599 kr. / år</p><ul><li><b>Bulk til 249 kr. pr. kort</b> – spar 30 kr. pr. kort</li><li>5 % medlemsrabat på øvrige faste CGC-tiers</li><li>Mulighed for at samle egne returordrer, hvor det kan lade sig gøre</li><li>Adgang til kommende medlemstilbud og fordele</li></ul><p class="fineprint">Medlemskabet fortsætter, indtil det opsiges. Medlemspris gælder kun, mens medlemskabet er aktivt. CGC-gebyrer, FMV-tillæg og særlige omkostninger kan fortsat medføre efterregulering.</p></div><div class="member-actions"><strong>Vælg medlemskab</strong><button class="btn member-pay" data-plan="monthly">59 kr./md.</button><button class="btn ghost member-pay" data-plan="yearly">599 kr./år</button><small id="memberMsg"></small></div></div></section>
 
-<section id="order" class="section"><span class="eyebrow">BESTIL GRADING</span><h2>Bestil fra bare 1 kort</h2><p class="lead">Vælg CGC-service og antal kort. Systemet beregner prisen automatisk.</p><div class="checkout-grid"><div class="calculator"><label for="tier">CGC-service</label><select id="tier"><option value="bulk">Bulk – 279 kr.</option><option value="economy">Economy – 299 kr.</option><option value="standard">Standard – 499 kr.</option><option value="express">Express – 899 kr.</option><option value="walkthrough">WalkThrough – 2.199 kr.</option><option value="unlimited">Unlimited Value – fra 2.199 kr.</option></select><label for="qty">Antal kort</label><div class="qtyrow"><button type="button" id="minus">−</button><input id="qty" type="number" min="1" max="100" value="1"><button type="button" id="plus">+</button></div><div class="total"><span>Grading & service</span><strong id="gradingTotal">279 kr.</strong></div><div class="total"><span>Forsikret returfragt i Danmark</span><strong>69 kr.</strong></div><div class="total grand"><span>I alt</span><strong id="total">348 kr.</strong></div><small id="tierNote">Bulk: maks. deklareret værdi $500 pr. kort. Du betaler selv forsendelsen af kortene til The Poke Bros.</small></div>
+<section id="order" class="section"><span class="eyebrow">BESTIL GRADING</span><h2>Bestil fra bare 1 kort</h2><p class="lead">Vælg CGC-service, antal kort og returfragt. Systemet beregner prisen automatisk.</p><div class="checkout-grid"><div class="calculator"><label for="tier">CGC-service</label><select id="tier"><option value="bulk">Bulk – 279 kr.</option><option value="economy">Economy – 299 kr.</option><option value="standard">Standard – 499 kr.</option><option value="express">Express – 899 kr.</option><option value="walkthrough">WalkThrough – 2.199 kr.</option><option value="unlimited">Unlimited Value – fra 2.199 kr.</option></select>
+<label for="shippingMethod">Returfragt</label><select id="shippingMethod"><option value="pakkeshop">Forsikret Pakkeshop (49 kr.)</option><option value="hjemmelevering" selected>Forsikret Hjemmelevering (69 kr.)</option></select><label for="qty">Antal kort</label><div class="qtyrow"><button type="button" id="minus">−</button><input id="qty" type="number" min="1" max="100" value="1"><button type="button" id="plus">+</button></div><div class="total"><span>Grading & service</span><strong id="gradingTotal">279 kr.</strong></div><div class="total"><span>Returfragt</span><strong id="shippingTotal">69 kr.</strong></div><div class="total grand"><span>I alt</span><strong id="total">348 kr.</strong></div><small id="tierNote">Bulk: maks. deklareret værdi $500 pr. kort. Du betaler selv forsendelsen af kortene til The Poke Bros.</small></div>
 <form id="checkoutForm" class="order-form">
     <div id="loginWarning" style="background: #2c1a1a; border: 1px solid #e63946; padding: 12px; border-radius: 6px; margin-bottom: 15px; display: none; text-align: center;">
         <p style="margin: 0; font-size: 14px; color: #ff4d5a;">Du skal være <a href="login.html" style="color: #fff; text-decoration: underline;">logget ind</a> for at bestille.</p>
@@ -100,6 +117,42 @@ async function loadPoolStatus() {
 }
 loadPoolStatus();
 
+async function homeTrackOrder() {
+    const orderId = document.getElementById('homeOrderId').value.trim();
+    const email = document.getElementById('homeEmail').value.trim();
+    const resBox = document.getElementById('homeTrackResult');
+
+    if (!orderId || !email) {
+        alert('Udfyld venligst både ordrenummer og e-mail.');
+        return;
+    }
+
+    resBox.style.display = 'block';
+    resBox.innerHTML = '<p style="color: #aaa; margin:0;">Søger efter ordre...</p>';
+
+    try {
+        const response = await fetch('/api/track', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orderId, email })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Ordren blev ikke fundet.');
+
+        resBox.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <b style="color: #e63946; font-size: 16px;">Ordre: ${data.orderId}</b>
+                <span style="background: #222633; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; color: #ff4d5a;">${data.statusLabel}</span>
+            </div>
+            <p style="margin: 5px 0; font-size: 14px; color: #ccc;">Antal kort: <b>${data.qty} stk.</b> (${data.tier.toUpperCase()})</p>
+            ${data.trackingNumber ? `<p style="margin: 5px 0; font-size: 14px; color: #fff;"><b>Retur-tracking:</b> ${data.trackingNumber}</p>` : ''}
+            <a href="track.html" style="display: inline-block; margin-top: 10px; font-size: 13px; color: #e63946; text-decoration: underline;">Se fuld tidslinje her →</a>
+        `;
+    } catch (err) {
+        resBox.innerHTML = `<p style="color: #ff4d5a; margin:0;">${err.message}</p>`;
+    }
+}
+
 function triggerMasterBallRain() {
     const egg = document.getElementById('pokeEasterEgg');
     egg.style.transform = 'scale(0.8)';
@@ -122,9 +175,27 @@ function closeMasterBallModal() { document.getElementById('masterBallModal').sty
 const basePrices={bulk:279,economy:299,standard:499,express:899,walkthrough:2199,unlimited:2199};
 let prices={...basePrices},me=null;
 const notes={bulk:'Bulk: maks. deklareret værdi $500 pr. kort.',economy:'Economy: maks. deklareret værdi $1.000 pr. kort.',standard:'Standard: maks. deklareret værdi $3.000 pr. kort.',express:'Express: maks. deklareret værdi $10.000 pr. kort.',walkthrough:'WalkThrough: maks. deklareret værdi $100.000 pr. kort.',unlimited:'Unlimited Value: CGC opkræver desuden 0,9 % af Fair Market Value.'};
+
 const q=document.getElementById('qty'),tier=document.getElementById('tier'),t=document.getElementById('total'),g=document.getElementById('gradingTotal'),note=document.getElementById('tierNote');
-function calc(){let n=Math.max(1,Math.min(100,parseInt(q.value)||1));q.value=n;let p=prices[tier.value];g.textContent=(n*p).toLocaleString('da-DK')+' kr.';t.textContent=(n*p+69).toLocaleString('da-DK')+' kr.';note.textContent=notes[tier.value]+' Du betaler selv forsendelsen af kortene til The Poke Bros.'+(me?.membership?.active?' Aktiv Poke Bro-medlemspris er anvendt.':'')}
-document.getElementById('minus').onclick=()=>{q.value=Math.max(1,+q.value-1);calc()};document.getElementById('plus').onclick=()=>{q.value=Math.min(100,+q.value+1);calc()};q.oninput=calc;tier.onchange=calc;
+const shippingSelect=document.getElementById('shippingMethod'),shippingTotalEl=document.getElementById('shippingTotal');
+
+function calc(){
+    let n=Math.max(1,Math.min(100,parseInt(q.value)||1));
+    q.value=n;
+    let p=prices[tier.value];
+    let shipPrice = shippingSelect.value === 'hjemmelevering' ? 69 : 49;
+
+    g.textContent=(n*p).toLocaleString('da-DK')+' kr.';
+    shippingTotalEl.textContent=shipPrice+' kr.';
+    t.textContent=(n*p+shipPrice).toLocaleString('da-DK')+' kr.';
+    note.textContent=notes[tier.value]+' Du betaler selv forsendelsen af kortene til The Poke Bros.'+(me?.membership?.active?' Aktiv Poke Bro-medlemspris er anvendt.':'');
+}
+
+document.getElementById('minus').onclick=()=>{q.value=Math.max(1,+q.value-1);calc()};
+document.getElementById('plus').onclick=()=>{q.value=Math.min(100,+q.value+1);calc()};
+q.oninput=calc; 
+tier.onchange=calc; 
+shippingSelect.onchange=calc;
 
 async function loadAccount(){
     try{
@@ -158,7 +229,7 @@ document.getElementById('checkoutForm').addEventListener('submit',async e=>{
     const btn=e.currentTarget.querySelector('.pay'),msg=document.getElementById('payMsg');
     btn.disabled=true;btn.textContent='Åbner betaling…';msg.textContent='';
     const data=Object.fromEntries(new FormData(e.currentTarget));
-    data.qty=+q.value;data.tier=tier.value;
+    data.qty=+q.value;data.tier=tier.value;data.shippingMethod=shippingSelect.value;
     try{
         const r=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
         const j=await r.json();
