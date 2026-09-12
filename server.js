@@ -193,36 +193,40 @@ app.get('/api/admin/sell-requests', checkAdmin, async (req, res) => {
     }
 });
 
-// AI KORT-VURDERING (PRE-GRADE)
+// AI KORT-VURDERING (OPDATERET TIL FORSIDE OG BAGSIDE)
 app.post('/api/ai-grade', async (req, res) => {
     try {
-        const { imageBase64, cardName } = req.body || {};
-        if (!imageBase64) return res.status(400).json({ error: 'Intet billede modtaget.' });
+        const { frontImageBase64, backImageBase64, cardName } = req.body || {};
+        if (!frontImageBase64) return res.status(400).json({ error: 'Billede af forsiden mangler.' });
 
         const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-        if (!apiKey) return res.status(503).json({ error: 'AI-vurdering er ikke konfigureret på serveren endnu (GEMINI_API_KEY mangler på Render).' });
+        if (!apiKey) return res.status(503).json({ error: 'AI-vurdering er ikke konfigureret på serveren endnu.' });
 
-        const mimeMatch = imageBase64.match(/^data:(image\/\w+);base64,/);
-        const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-        const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
+        const frontMimeMatch = frontImageBase64.match(/^data:(image\/\w+);base64,/);
+        const frontMimeType = frontMimeMatch ? frontMimeMatch[1] : 'image/jpeg';
+        const frontData = frontImageBase64.replace(/^data:image\/\w+;base64,/, '');
+
+        const parts = [
+            { text: `Du er en professionel CGC / PSA kort-grader for samlekort (Pokémon / One Piece). Analyser dette kort (${cardName || 'Ukendt kort'}) ud fra de medfølgende billeder (forside og evt. bagside). Vurder de fire underområder: Centering (centrering på forside/bagside), Corners (hjørner), Edges (kanter) og Surface (overflade). Giv en estimeret CGC-karakter samt en konstruktiv, ærlig begrundelse på dansk i et skarpt format med overskrifter. Husk at nævne klart, at vurderingen udelukkende er vejledende.` },
+            { inline_data: { mime_type: frontMimeType, data: frontData } }
+        ];
+
+        if (backImageBase64) {
+            const backMimeMatch = backImageBase64.match(/^data:(image\/\w+);base64,/);
+            const backMimeType = backMimeMatch ? backMimeMatch[1] : 'image/jpeg';
+            const backData = backImageBase64.replace(/^data:image\/\w+;base64,/, '');
+            parts.push({ inline_data: { mime_type: backMimeType, data: backData } });
+        }
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [
-                        { text: `Du er en professionel CGC / PSA kort-grader for samlekort (Pokémon / One Piece). Analyser dette kort (${cardName || 'Ukendt kort'}) ud fra de fire underområder: Centering, Corners (hjørner), Edges (kanter) og Surface (overflade). Giv en estimeret CGC-karakter samt en konstruktiv, ærlig begrundelse på dansk i et skarpt format med overskrifter. Husk at nævne klart, at vurderingen udelukkende er vejledende.` },
-                        { inline_data: { mime_type: mimeType, data: base64Data } }
-                    ]
-                }]
-            })
+            body: JSON.stringify({ contents: [{ parts }] })
         });
 
         if (!response.ok) {
             const errData = await response.json();
-            const msg = errData?.error?.message || JSON.stringify(errData);
-            throw new Error(`Gemini API fejl: ${msg}`);
+            throw new Error(errData?.error?.message || 'Gemini API fejl');
         }
 
         const data = await response.json();
