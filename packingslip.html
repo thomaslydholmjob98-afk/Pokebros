@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pakkeseddel & Kortliste | The Poke Bros</title>
+    <style>
+        body { font-family: Arial, sans-serif; color: #1a1a1a; margin: 0; padding: 40px; background: #fff; }
+        .invoice-box { max-width: 800px; margin: auto; padding: 30px; border: 1px solid #ddd; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); font-size: 16px; line-height: 24px; border-radius: 8px; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; border-bottom: 2px solid #e63946; padding-bottom: 20px; }
+        .brand { font-size: 24px; font-weight: bold; color: #111318; letter-spacing: 1px; }
+        .order-info { text-align: right; }
+        .section-title { font-weight: bold; color: #555; margin-bottom: 5px; font-size: 14px; text-transform: uppercase; }
+        .details-grid { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        
+        .alert-box { background: #fff3f3; border: 2px solid #e63946; padding: 15px; border-radius: 6px; margin-bottom: 25px; text-align: center; }
+        .alert-box h3 { color: #e63946; margin: 0 0 5px 0; font-size: 16px; }
+        .alert-box p { margin: 0; font-size: 14px; color: #333; font-weight: bold; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 20px; }
+        table th, table td { padding: 10px; border: 1px solid #ddd; text-align: left; font-size: 14px; }
+        table th { background: #f8f9fa; }
+
+        .card-input-table input { width: 100%; border: none; background: transparent; font-size: 14px; outline: none; padding: 4px 0; }
+        
+        .footer { text-align: center; margin-top: 30px; font-size: 12px; color: #777; border-top: 1px solid #eee; padding-top: 15px; }
+        .btn-row { display: flex; gap: 15px; justify-content: center; margin-top: 25px; }
+        .action-btn { padding: 12px 24px; background: #e63946; color: #fff; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; text-decoration: none; text-align: center; }
+        
+        @media print { .action-btn, .no-print { display: none !important; } body { padding: 0; } .invoice-box { border: none; box-shadow: none; padding: 0; } }
+    </style>
+</head>
+<body>
+    <div class="invoice-box">
+        <div class="header">
+            <div>
+                <div class="brand">THE POKE BROS</div>
+                <div style="font-size: 13px; color: #666; margin-top: 4px;">Uafhængig CGC-indsendelsesservice</div>
+            </div>
+            <div class="order-info">
+                <h2 style="margin: 0; color: #e63946;" id="orderIdTitle">Ordre #--</h2>
+                <div style="font-size: 14px; color: #666; margin-top: 4px;" id="orderDate">Dato: --</div>
+            </div>
+        </div>
+
+        <div class="alert-box">
+            <h3>⚠️ VIGTIG BESKED TIL KUNDEN ⚠️</h3>
+            <p>DENNE PAKKESEDDEL SKAL UDSKRIVES OG LÆGGES MED INDE I KASSEN SAMMEN MED DINE KORT!</p>
+        </div>
+
+        <div class="details-grid">
+            <div>
+                <div class="section-title">Afsender (Kunde):</div>
+                <div id="customerName" style="font-weight: bold;">--</div>
+                <div id="customerAddress">--</div>
+                <div id="customerCity">--</div>
+                <div id="customerEmail" style="color: #666; font-size: 14px; margin-top: 4px;">--</div>
+            </div>
+            <div style="text-align: right;">
+                <div class="section-title">Modtager:</div>
+                <div style="font-weight: bold;">The Poke Bros</div>
+                <div>Att: Thomas Lydholm</div>
+                <div style="color: #666; font-size: 14px; margin-top: 4px;">Danmark</div>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 5px; font-weight: bold;">Ordreoversigt:</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Service / Tier</th>
+                    <th style="text-align: center;">Antal kort betalt</th>
+                    <th style="text-align: right;">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td id="tierName">CGC Grading</td>
+                    <td id="orderQty" style="text-align: center;">--</td>
+                    <td id="orderStatus" style="text-align: right;">--</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="section-title" style="margin-top: 25px;">Kortliste (Registrér dine kort herunder):</div>
+        <p class="no-print" style="font-size: 13px; color: #666; margin-top: 0;">Skriv gerne navnene på dine kort herunder, før du trykker udskriv, så vi har fuldt overblik over forsendelsen.</p>
+        
+        <table class="card-input-table">
+            <thead>
+                <tr>
+                    <th style="width: 50%;">Kortets navn & sæt</th>
+                    <th style="width: 25%;">Holographic / Variant</th>
+                    <th style="width: 25%;">Forventet værdi ($)</th>
+                </tr>
+            </thead>
+            <tbody id="cardRows">
+                <!-- Genereres dynamisk baseret på ordreantal -->
+            </tbody>
+        </table>
+
+        <div class="btn-row">
+            <button onclick="window.print()" class="action-btn">Udskriv Pakkeseddel & Kortliste</button>
+        </div>
+
+        <div class="footer">
+            The Poke Bros • thepokebros.com • Pak altid dine kort sikkert i sleeve og toploader!
+        </div>
+    </div>
+
+    <script>
+        async function loadSlip() {
+            const params = new URLSearchParams(location.search);
+            const orderId = params.get('order');
+            if (!orderId) { alert('Ingen ordre angivet.'); return; }
+
+            try {
+                const res = await fetch('/api/track-public/' + orderId);
+                if (!res.ok) throw new Error('Ordre ikke fundet');
+                const o = await res.json();
+
+                document.getElementById('orderIdTitle').textContent = 'Ordre ' + o.orderId;
+                document.getElementById('orderDate').textContent = 'Dato: ' + new Date(o.createdAt).toLocaleDateString('da-DK');
+                document.getElementById('customerName').textContent = o.customer_name;
+                document.getElementById('customerAddress').textContent = o.customer_address;
+                document.getElementById('customerCity').textContent = o.customer_postal + ' ' + o.customer_city;
+                document.getElementById('customerEmail').textContent = o.customer_email;
+                document.getElementById('tierName').textContent = 'CGC ' + o.tier.toUpperCase() + ' Grading Service';
+                document.getElementById('orderQty').textContent = o.qty + ' stk.';
+                document.getElementById('orderStatus').textContent = o.statusLabel;
+
+                // Generér det korrekte antal rækker ud fra hvor mange kort kunden har bestilt
+                const tbody = document.getElementById('cardRows');
+                let rowsHtml = '';
+                for (let i = 1; i <= o.qty; i++) {
+                    rowsHtml += `
+                        <tr>
+                            <td><input type="text" placeholder="${i}. Fx Charizard Base Set"></td>
+                            <td><input type="text" placeholder="Fx Holo / Reverse"></td>
+                            <td><input type="text" placeholder="Fx $150"></td>
+                        </tr>
+                    `;
+                }
+                tbody.innerHTML = rowsHtml;
+
+            } catch (err) {
+                alert('Kunne ikke indhente ordredetaljer.');
+            }
+        }
+        loadSlip();
+    </script>
+</body>
+</html>
