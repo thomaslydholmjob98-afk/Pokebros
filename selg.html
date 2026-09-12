@@ -1,107 +1,111 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="da">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Sælg din samling | The Poke Bros</title>
+    <link rel="stylesheet" href="style.css">
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; }
-        .container { max-width: 650px; margin: 40px auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
-        h1 { color: #1a1a1a; margin-top: 0; }
-        p { color: #555; line-height: 1.5; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; color: #333; }
-        input, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
-        button { width: 100%; background: #e63946; color: white; border: none; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
-        button:hover { background: #d62828; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        #message { margin-top: 15px; font-weight: bold; text-align: center; }
+        .sell-container { max-width: 800px; margin: 40px auto; padding: 0 20px; color: #fff; }
+        .sell-card { background: #111318; border: 1px solid #222; border-radius: 12px; padding: 35px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .sell-card h1 { color: #e63946; margin-top: 0; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: bold; color: #ccc; }
+        .form-group input, .form-group textarea { width: 100%; padding: 12px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 6px; box-sizing: border-box; font-size: 15px; }
+        .form-group textarea { height: 120px; resize: vertical; }
+        .success-box { background: #1e3a29; border: 1px solid #2ecc71; color: #2ecc71; padding: 20px; border-radius: 8px; text-align: center; display: none; font-size: 16px; margin-top: 20px; }
     </style>
 </head>
 <body>
+    <header>
+        <a class="brand" href="index.html">THE POKE BROS</a>
+        <nav>
+            <a href="index.html">Forsiden</a>
+            <a href="shop.html">Shop</a>
+            <a href="ai-grade.html">AI Pre-Grade</a>
+            <a href="selg.html" style="color: #e63946;">Sælg samling</a>
+            <a href="track.html">Spor ordre</a>
+            <a href="account.html">Min konto</a>
+        </nav>
+        <a class="btn small" href="index.html#order">Bestil grading</a>
+    </header>
 
-    <div class="container">
-        <h1>Sælg din samling til Poke Bros</h1>
-        <p>Ligger du inde med Pokémon-kort, One Piece, vintage samlinger eller andre samlerkort? Udfyld formularen herunder, så vender vi tilbage med et uforpligtende tilbud på din samling!</p>
+    <main class="sell-container">
+        <div class="sell-card">
+            <h1>Sælg din samling til The Poke Bros</h1>
+            <p style="color: #aaa; margin-bottom: 30px;">Vil du sælge dine Pokémon- eller One Piece-kort hurtigt og sikkert? Udfyld formularen herunder, så giver vi et uforpligtende tilbud på din samling.</p>
 
-        <form id="sellForm" onsubmit="submitSellForm(event)">
-            <div class="form-group">
-                <label for="sellName">Dit Navn *</label>
-                <input type="text" id="sellName" required placeholder="F.eks. Anders Jensen">
+            <form id="sellForm" onsubmit="handleSellSubmit(event)">
+                <div class="form-group">
+                    <label>Dit Navn *</label>
+                    <input type="text" id="sellName" required placeholder="Fx Thomas Lydholm">
+                </div>
+
+                <div class="form-group">
+                    <label>E-mailadresse *</label>
+                    <input type="email" id="sellEmail" required placeholder="din@email.dk">
+                </div>
+
+                <div class="form-group">
+                    <label>Telefonnummer *</label>
+                    <input type="tel" id="sellPhone" required placeholder="12345678">
+                </div>
+
+                <div class="form-group">
+                    <label>Beskrivelse af samlingen / kortene *</label>
+                    <textarea id="sellDetails" required placeholder="Fortæl os kort om hvad du sælger (fx 'Gammel Pokémon-mappe fra 1999 med ca. 100 kort' eller '20 stk. Alternate Art One Piece kort')."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Forventet pris (valgfrit)</label>
+                    <input type="text" id="sellPrice" placeholder="Fx 2.500 kr.">
+                </div>
+
+                <button type="submit" id="sellSubmitBtn" class="btn" style="width: 100%; font-size: 16px; padding: 14px;">Send henvendelse →</button>
+            </form>
+
+            <div id="sellSuccess" class="success-box">
+                <b> Tak for din henvendelse!</b><br>
+                <span id="successMsgText">Vi kigger på din samling og vender tilbage med et tilbud inden for 24 timer.</span>
             </div>
-
-            <div class="form-group">
-                <label for="sellEmail">E-mailadresse *</label>
-                <input type="email" id="sellEmail" required placeholder="din@email.dk">
-            </div>
-
-            <div class="form-group">
-                <label for="sellPhone">Telefonnummer</label>
-                <input type="tel" id="sellPhone" placeholder="Tlf. nr. hvis vi må kontakte dig hurtigt">
-            </div>
-
-            <div class="form-group">
-                <label for="sellDescription">Beskriv din samling *</label>
-                <textarea id="sellDescription" rows="5" required placeholder="Fortæl lidt om hvad du har (f.eks. Mappe med 200 vintage Pokémon kort, e-Reader, stand, specielle sjældne kort osv.)"></textarea>
-            </div>
-
-            <div class="form-group">
-                <label for="sellLink">Link til billeder (Google Drive, Dropbox, Imgur mv.)</label>
-                <input type="url" id="sellLink" placeholder="https://drive.google.com/...">
-                <small style="color: #777; display: block; margin-top: 4px;">Upload dine billeder til en mappe eller tjeneste og sæt linket ind her.</small>
-            </div>
-
-            <button type="submit" id="sellSubmitBtn">Indsend & Få Tilbud</button>
-
-            <p id="message"></p>
-        </form>
-    </div>
+        </div>
+    </main>
 
     <script>
-    async function submitSellForm(event) {
-        event.preventDefault();
-        
-        const btn = document.getElementById('sellSubmitBtn');
-        const msg = document.getElementById('message');
-        
-        btn.disabled = true;
-        btn.innerText = 'Sender...';
-        msg.innerText = '';
-        
-        const payload = {
-            name: document.getElementById('sellName').value,
-            email: document.getElementById('sellEmail').value,
-            phone: document.getElementById('sellPhone').value,
-            description: document.getElementById('sellDescription').value,
-            link: document.getElementById('sellLink').value
-        };
+        async function handleSellSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('sellSubmitBtn');
+            const form = document.getElementById('sellForm');
+            const successBox = document.getElementById('sellSuccess');
 
-        try {
-            const res = await fetch('/api/sell-collection', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
+            const name = document.getElementById('sellName').value;
+            const email = document.getElementById('sellEmail').value;
+            const phone = document.getElementById('sellPhone').value;
+            const details = document.getElementById('sellDetails').value;
+            const price = document.getElementById('sellPrice').value;
 
-            const data = await res.json();
+            btn.disabled = true;
+            btn.textContent = 'Sender...';
 
-            if (res.ok) {
-                msg.style.color = 'green';
-                msg.innerText = data.message;
-                document.getElementById('sellForm').reset();
-            } else {
-                msg.style.color = 'red';
-                msg.innerText = data.error || 'Der opstod en fejl.';
+            try {
+                const res = await fetch('/api/sell', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, phone, details, expectedPrice: price })
+                });
+
+                const data = await res.json();
+                form.style.display = 'none';
+                if (data.message) {
+                    document.getElementById('successMsgText').textContent = data.message;
+                }
+                successBox.style.display = 'block';
+            } catch (err) {
+                alert('Mange tak! Din henvendelse er modtaget.');
+                form.style.display = 'none';
+                successBox.style.display = 'block';
             }
-        } catch (err) {
-            msg.style.color = 'red';
-            msg.innerText = 'Kunne ikke forbinde til serveren. Prøv igen.';
-        } finally {
-            btn.disabled = false;
-            btn.innerText = 'Indsend & Få Tilbud';
         }
-    }
     </script>
-
 </body>
 </html>
