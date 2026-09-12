@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="da">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Social Media Opslag Generator | The Poke Bros</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .gen-container { max-width: 700px; margin: 40px auto; padding: 0 20px; color: #fff; }
+        .gen-card { background: #111318; border: 1px solid #222; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .gen-card h2 { color: #e63946; margin-top: 0; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #ccc; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid #333; border-radius: 6px; background: #1a1e29; color: #fff; font-size: 15px; box-sizing: border-box; }
+        textarea { width: 100%; height: 220px; padding: 15px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 6px; font-family: monospace; font-size: 14px; box-sizing: border-box; resize: vertical; }
+        .success-msg { color: #2ecc71; font-weight: bold; font-size: 14px; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
+    <header>
+        <a class="brand" href="index.html">THE POKE BROS</a>
+        <nav>
+            <a href="index.html">Forsiden</a>
+            <a href="admin.html">Admin</a>
+        </nav>
+    </header>
+
+    <main class="gen-container">
+        <div class="gen-card">
+            <h2>Facebook & Discord Opslag Generator</h2>
+            <p style="color: #aaa; font-size: 14px;">Brug dette værktøj til at generere et fedt opslag til samlegrupper, når I samler kort til næste CGC-bulk pulje.</p>
+            
+            <div class="form-group" style="margin-top: 20px;">
+                <label>Antal kort i nuværende pulje (fx fra forsiden)</label>
+                <input type="number" id="genPoolCount" value="12" oninput="generatePost()">
+            </div>
+            <div class="form-group">
+                <label>Fremhævet tilbud / Bemærkning (valgfrit)</label>
+                <input type="text" id="genNote" value="Husk koden MASTER2026 for 10% rabat på din første ordre!" oninput="generatePost()">
+            </div>
+
+            <div class="form-group">
+                <label>Genereret Opslagstekst</label>
+                <textarea id="genOutput" readonly></textarea>
+            </div>
+            
+            <button onclick="copyToClipboard()" class="btn" style="width: 100%;">Kopiér opslag til udklipsholder</button>
+            <p id="copySuccess" class="success-msg">Opslaget er kopieret! Du kan nu klistre det ind på Facebook eller Discord.</p>
+        </div>
+    </main>
+
+    <script>
+        function generatePost() {
+            const count = document.getElementById('genPoolCount').value || 0;
+            const note = document.getElementById('genNote').value;
+
+            const text = `🔥 CGC GRADING MED THE POKE BROS 🔥
+
+Vil du have dine Pokémon- eller One Piece-kort graded hos CGC uden at skulle samle en stor submission selv? Hos The Poke Bros kan du sende fra bare 1 kort!
+
+📦 Nuværende puljestatus: ${count} / 25 kort samlet! Vi sender afsted, så snart puljen er fyldt.
+
+Priser pr. kort (inkl. CGC-gebyr, valuta & forsikret håndtering):
+• Bulk: 279 kr. (Maks. $500 værd)
+• Economy: 299 kr. (Maks. $1.000 værd)
+• Standard: 499 kr. (Maks. $3.000 værd)
+
+💡 ${note}
+
+Læs mere, se priser og bestil direkte på vores sikre platform:
+👉 https://www.thepokebros.com
+
+Pak altid dine kort sikkert i sleeve og toploader! 🚀`;
+
+            document.getElementById('genOutput').value = text;
+        }
+
+        function copyToClipboard() {
+            const textarea = document.getElementById('genOutput');
+            textarea.select();
+            navigator.clipboard.writeText(textarea.value);
+            
+            const msg = document.getElementById('copySuccess');
+            msg.style.display = 'block';
+            setTimeout(() => { msg.style.display = 'none'; }, 3000);
+        }
+
+        // Generér ved opstart
+        generatePost();
+    </script>
+</body>
+</html>
