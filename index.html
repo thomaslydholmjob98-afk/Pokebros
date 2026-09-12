@@ -44,6 +44,18 @@
             letter-spacing: 1px; box-shadow: 0 4px 10px rgba(0,0,0,0.4); z-index: 10;
         }
         .sold-overlay { opacity: 0.5; filter: grayscale(40%); }
+
+        /* Professionel FAQ Stil på Forsiden */
+        .faq-search { width: 100%; padding: 14px 18px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 8px; font-size: 15px; margin-bottom: 25px; box-sizing: border-box; }
+        .faq-search:focus { outline: none; border-color: #e63946; }
+        .faq-category-title { color: #2ec4b6; font-size: 18px; margin: 25px 0 12px 0; border-bottom: 1px solid #222; padding-bottom: 6px; font-weight: bold; }
+        .faq-item { background: #111318; border: 1px solid #222; border-radius: 8px; margin-bottom: 10px; overflow: hidden; transition: border-color 0.2s; text-align: left; }
+        .faq-item:hover { border-color: #444; }
+        .faq-question { padding: 16px 20px; font-size: 15px; font-weight: bold; color: #fff; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+        .faq-question::after { content: '+'; font-size: 20px; color: #e63946; transition: transform 0.2s; }
+        .faq-item.active .faq-question::after { transform: rotate(45deg); }
+        .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s ease; padding: 0 20px; color: #ccc; font-size: 14px; line-height: 1.6; }
+        .faq-item.active .faq-answer { max-height: 300px; padding: 0 20px 18px 20px; }
     </style>
 </head>
 <body>
@@ -236,12 +248,54 @@
         <a class="btn" href="track.html">Spor min ordre</a>
     </section>
 
-    <section id="faq" class="section alt">
-        <span class="eyebrow">FAQ</span>
-        <h2>Ofte stillede spørgsmål</h2>
-        <details><summary>Hvordan virker Poke Bro-medlemskabet?</summary><p>Medlemskabet koster 59 kr. pr. måned eller 599 kr. pr. år. Aktive medlemmer får Bulk til 249 kr. pr. kort.</p></details>
-        <details><summary>Skal jeg sende 25 kort?</summary><p>Nej. Du kan sende helt ned til 1 kort. Vi samler kort fra flere kunder og sender samlet til CGC.</p></details>
-        <details><summary>Hvordan sender jeg mine kort sikkert?</summary><p>Efter bestilling får du konkrete pakkeinstruktioner og pakkeseddel.</p></details>
+    <!-- NY PROFESSIONEL FAQ SEKTION MED SØGEFELT OG FOLD-UD -->
+    <section id="faq" class="section alt" style="text-align: center;">
+        <div style="max-width: 800px; margin: 0 auto;">
+            <span class="eyebrow">FAQ</span>
+            <h2>Ofte stillede spørgsmål</h2>
+            <p class="lead" style="margin-bottom: 25px;">Få svar på alt omkring CGC-gradering, forsendelse, medlemskaber og sikkerhed hos The Poke Bros.</p>
+
+            <input type="text" id="faqSearchInput" class="faq-search" placeholder="🔍 Søg efter svar (fx 'forsendelse', 'bulk', 'medlem')..." oninput="filterFaq()">
+
+            <!-- KATEGORI 1 -->
+            <div class="faq-category-title">CGC Gradering & Submission</div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">Hvordan virker Poke Bro-medlemskabet?</div>
+                <div class="faq-answer">Medlemskabet koster 59 kr. pr. måned eller 599 kr. pr. år. Aktive medlemmer får Bulk til 249 kr. pr. kort, 5% rabat på øvrige tiers samt særlige fordele.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">Skal jeg sende 25 kort?</div>
+                <div class="faq-answer">Nej! Du kan sende helt ned til 1 kort. Vi samler kort fra flere samlere i vores fælles puljer og sørger for den samlede indsendelse til CGC i USA.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">Hvad er forskellen på Bulk, Economy og Standard?</div>
+                <div class="faq-answer">Forskellen ligger primært i kortets maksimale værdi efter gradering samt hastighed:<br>
+                • <b>Bulk:</b> Maks. deklareret værdi $500 pr. kort.<br>
+                • <b>Economy:</b> Maks. deklareret værdi $1.000 pr. kort.<br>
+                • <b>Standard:</b> Maks. deklareret værdi $3.000 pr. kort.</div>
+            </div>
+
+            <!-- KATEGORI 2 -->
+            <div class="faq-category-title">Forsendelse & Sikkerhed</div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">Hvordan sender jeg mine kort sikkert?</div>
+                <div class="faq-answer">Du skal <b>altid</b> lægge hvert enkelt kort i et tætsiddende sleeve og derefter i en hård toploader eller semi-rigid. Læg dem forsvarligt i en lille kasse med fyld (fx bobleplast) og husk at vedlægge din udskrevne pakkeseddel!</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">Hvornår bliver kortene sendt afsted til CGC?</div>
+                <div class="faq-answer">Vi samler kort i faste puljer (du kan se live-status på forsiden). Så snart puljen er fyldt, sendes kassen forsvarligt med ekspresforsendelse til CGC.</div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-question" onclick="toggleFaq(this)">Er mine kort forsikret undervejs?</div>
+                <div class="faq-answer">Ja! Alle forsendelser mellem dig, os og CGC er fuldt forsikrede, så du kan være helt tryg ved at overlade dine samlekort til os.</div>
+            </div>
+        </div>
     </section>
 
     <section id="contact" class="section contact">
@@ -384,6 +438,30 @@ function triggerMasterBallRain() {
 }
 
 function closeMasterBallModal() { document.getElementById('masterBallModal').style.display = 'none'; }
+
+// JavaScript til FAQ fold-ud og søgefunktion
+function toggleFaq(element) {
+    const item = element.parentElement;
+    const isActive = item.classList.contains('active');
+    document.querySelectorAll('.faq-item').forEach(el => el.classList.remove('active'));
+    if (!isActive) {
+        item.classList.add('active');
+    }
+}
+
+function filterFaq() {
+    const query = document.getElementById('faqSearchInput').value.toLowerCase();
+    const items = document.querySelectorAll('.faq-item');
+    items.forEach(item => {
+        const question = item.querySelector('.faq-question').textContent.toLowerCase();
+        const answer = item.querySelector('.faq-answer').textContent.toLowerCase();
+        if (question.includes(query) || answer.includes(query)) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
 
 const basePrices={bulk:279,economy:299,standard:499,express:899,walkthrough:2199,unlimited:2199};
 let prices={...basePrices},me=null;
