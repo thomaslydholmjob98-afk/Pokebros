@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Webshop | The Poke Bros</title>
+    <title>Shop | The Poke Bros</title>
     <link rel="stylesheet" href="style.css">
     <style>
         .shop-container { max-width: 1100px; margin: 40px auto; padding: 0 20px; }
@@ -19,8 +19,8 @@
         .product-badge { align-self: flex-start; background: #ee6c4d; color: white; font-size: 11px; font-weight: bold; padding: 3px 8px; border-radius: 4px; margin-bottom: 8px; text-transform: uppercase; }
         .product-title { font-size: 16px; font-weight: bold; color: #1a1a1a; margin: 0 0 8px 0; }
         .product-price { font-size: 18px; font-weight: bold; color: #2b2d42; margin-bottom: 15px; }
-        .buy-btn { background: #e63946; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: auto; width: 100%; text-align: center; text-decoration: none; }
-        .buy-btn:hover { background: #d62828; }
+        .buy-btn { background: #2b2d42; color: white; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; margin-top: auto; width: 100%; text-align: center; text-decoration: none; display: block; box-sizing: border-box; }
+        .buy-btn:hover { background: #e63946; }
         .empty-shop { text-align: center; color: #666; padding: 40px; grid-column: 1 / -1; }
     </style>
 </head>
@@ -54,7 +54,6 @@
         </div>
 
         <div class="product-grid" id="productGrid">
-            <!-- Varer indlæses dynamisk fra backend -->
             <div class="empty-shop">Henter produkter...</div>
         </div>
     </main>
@@ -85,13 +84,13 @@
         }
 
         grid.innerHTML = products.map(p => `
-            <div class="product-card" data-category="${p.category}">
+            <div class="product-card">
                 <img src="${p.image_url || 'https://via.placeholder.com/300x400?text=Ingen+billede'}" class="product-image" alt="${p.title}">
                 <div class="product-info">
                     <span class="product-badge">${p.category_label || p.category}</span>
                     <h3 class="product-title">${p.title}</h3>
                     <div class="product-price">${p.price_dkk} kr.</div>
-                    <button class="buy-btn" onclick="buyProduct('${p.id}')">Køb nu</button>
+                    <a href="mailto:thomaslydholmjob98@gmail.com?subject=Køb/Forespørgsel: ${encodeURIComponent(p.title)}" class="buy-btn">Kontakt for køb</a>
                 </div>
             </div>
         `).join('');
@@ -106,24 +105,6 @@
         } else {
             const filtered = allProducts.filter(p => p.category === category);
             renderProducts(filtered);
-        }
-    }
-
-    async function buyProduct(productId) {
-        try {
-            const res = await fetch('/api/shop-checkout', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ productId })
-            });
-            const data = await res.json();
-            if (res.ok && data.url) {
-                location.href = data.url;
-            } else {
-                alert(data.error || 'Kunne ikke starte betaling.');
-            }
-        } catch (err) {
-            alert('Der opstod en fejl ved betalingen.');
         }
     }
 
