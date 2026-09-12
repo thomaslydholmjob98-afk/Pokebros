@@ -1,31 +1,40 @@
 const express=require('express'),path=require('path'),crypto=require('crypto'),helmet=require('helmet'),rateLimit=require('express-rate-limit');
 const {Pool}=require('pg'); const app=express(); const PORT=process.env.PORT||3000;
-const nodemailer = require('nodemailer');
 
-const isSecure = Number(process.env.SMTP_PORT) === 465;
+// Hjælpefunktion til at sende mails via Brevo API (HTTP) i stedet for SMTP
+async function sendEmailViaBrevo({ to, subject, html }) {
+    const apiKey = process.env.BREVO_API_KEY || process.env.SMTP_PASS; 
+    
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+            'accept': 'application/json',
+            'api-key': apiKey,
+            'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+            sender: { 
+                name: 'The Poke Bros', 
+                email: 'thomaslydholmjob98@gmail.com' 
+            },
+            to: [{ email: to }],
+            subject: subject,
+            htmlContent: html
+        })
+    });
 
-// Transporter konfigureret med SSL til port 465
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
-    port: Number(process.env.SMTP_PORT || 465),
-    secure: isSecure, 
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-    },
-    tls: {
-        rejectUnauthorized: false
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 5000,
-    socketTimeout: 10000
-});
+    if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(`Brevo API Fejl (${response.status}): ${JSON.stringify(errData)}`);
+    }
+
+    return await response.json();
+}
 
 // Hjælpefunktion til at sende velkomstmail
 async function sendWelcomeEmail(toEmail, userName) {
     try {
-        await transporter.sendMail({
-            from: process.env.EMAIL_FROM || 'The Poke Bros <thomaslydholmjob98@gmail.com>',
+        await sendEmailViaBrevo({
             to: toEmail,
             subject: 'Velkommen til Poke Bros!',
             html: `
@@ -38,9 +47,9 @@ async function sendWelcomeEmail(toEmail, userName) {
                 </div>
             `
         });
-        console.log(`Velkomstmail sendt til ${toEmail}`);
+        console.log(`Velkomstmail sendt via API til ${toEmail}`);
     } catch (err) {
-        console.error('Fejl ved afsendelse af e-mail:', err);
+        console.error('Fejl ved afsendelse af velkomstmail:', err);
     }
 }
 
@@ -85,7 +94,7 @@ app.post('/api/track',async(req,res)=>{const id=String(req.body?.orderId||'').tr
 app.get('/api/admin/orders',async(req,res)=>{if(!adminOK(req))return res.status(401).json({error:'Forkert admin-adgangskode.'});const r=await db.query('SELECT * FROM orders ORDER BY created_at DESC'),orders=[];for(const o of r.rows){const p=await publicOrder(o.order_id);orders.push({...o,...p})}const poolCards=r.rows.filter(o=>['cards_received','awaiting_batch'].includes(o.status)).reduce((n,o)=>n+o.qty,0),members=Number((await db.query('SELECT COUNT(*) c FROM users WHERE membership_active=TRUE')).rows[0].c);res.json({orders,statuses:STATUS,stats:{orders:r.rowCount,poolCards,paidRevenueDkk:r.rows.filter(o=>o.payment_status==='paid').reduce((n,o)=>n+o.total_dkk,0),members}})});
 app.patch('/api/admin/orders/:id',async(req,res)=>{if(!adminOK(req))return res.status(401).json({error:'Forkert admin-adgangskode.'});const {status,batch,trackingNumber,note}=req.body||{};if(status&&!STATUS[status])return res.status(400).json({error:'Ukendt status.'});const cur=(await db.query('SELECT * FROM orders WHERE order_id=$1',[req.params.id])).rows[0];if(!cur)return res.status(404).json({error:'Ordren blev ikke fundet.'});if(status&&status!==cur.status){await db.query('UPDATE orders SET status=$1 WHERE order_id=$2',[status,req.params.id]);await timeline(req.params.id,status,note||'')}if(batch!==undefined)await db.query('UPDATE orders SET batch=$1 WHERE order_id=$2',[String(batch||'').trim()||null,req.params.id]);if(trackingNumber!==undefined)await db.query('UPDATE orders SET tracking_number=$1 WHERE order_id=$2',[String(trackingNumber||'').trim()||null,req.params.id]);res.json(await publicOrder(req.params.id))});
 
-// Route til "Sælg din samling" formularen
+// Route til "Sælg din samling" formularen via HTTP API
 app.post('/api/sell-collection', authLimiter, async (req, res) => {
     try {
         const { name, email, phone, description, link } = req.body || {};
@@ -96,9 +105,7 @@ app.post('/api/sell-collection', authLimiter, async (req, res) => {
 
         console.log(`[Opkøb] Modtaget henvendelse fra: ${name} (${email})`);
 
-        // Send mail til dig selv om det nye tilbud
-        await transporter.sendMail({
-            from: process.env.EMAIL_FROM || 'The Poke Bros <thomaslydholmjob98@gmail.com>',
+        await sendEmailViaBrevo({
             to: 'thomaslydholmjob98@gmail.com',
             subject: `[Poke Bros Opkøb] Ny samling indsendt af ${name}`,
             html: `
@@ -115,11 +122,11 @@ app.post('/api/sell-collection', authLimiter, async (req, res) => {
             `
         });
 
-        console.log(`[Opkøb] Mail sendt succesfuldt for ${name}`);
+        console.log(`[Opkøb] Mail sendt succesfuldt via API for ${name}`);
         return res.json({ ok: true, message: 'Tak for din henvendelse! Vi vender tilbage med et tilbud inden for 24 timer.' });
 
     } catch (err) {
-        console.error('Fejl ved indsendelse af samling:', err);
+        console.error('Fejl ved indsendelse af samling via API:', err);
         return res.status(500).json({ error: 'E-mailen kunne ikke afsendes. Tjek venligst serverloggen.' });
     }
 });
