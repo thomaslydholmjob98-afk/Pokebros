@@ -157,13 +157,11 @@ const handleSellRequest = async (req, res) => {
         const textDetails = details || description || '';
         const priceValue = expectedPrice || price || '';
 
-        // 1. Gem henvendelsen i databasen
         await pool.query(
             'INSERT INTO sell_requests (name, email, phone, details, expected_price) VALUES ($1, $2, $3, $4, $5)',
             [name || '', email || '', phone || '', textDetails, priceValue]
         );
 
-        // 2. Afsend e-mail notifikation via Brevo
         sendBrevoEmail({ name, email, phone, details: textDetails, expectedPrice: priceValue });
 
         res.json({ success: true, message: 'Mange tak! Din henvendelse er modtaget. Vi vender tilbage inden for 24 timer.' });
@@ -194,18 +192,21 @@ app.post('/api/ai-grade', async (req, res) => {
         if (!imageBase64) return res.status(400).json({ error: 'Intet billede modtaget.' });
 
         const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-        if (!apiKey) return res.status(503).json({ error: 'AI-vurdering er ikke konfigureret på serveren endnu.' });
+        if (!apiKey) return res.status(503).json({ error: 'AI-vurdering er ikke konfigureret på serveren endnu (GEMINI_API_KEY mangler på Render).' });
 
+        // Udtræk dynamisk MIME-type (png, jpeg, webp) og rå base64-data
+        const mimeMatch = imageBase64.match(/^data:(image\/\w+);base64,/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
         const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{
                     parts: [
                         { text: `Du er en professionel CGC / PSA kort-grader for samlekort (Pokémon / One Piece). Analyser dette kort (${cardName || 'Ukendt kort'}) ud fra de fire underområder: Centering, Corners (hjørner), Edges (kanter) og Surface (overflade). Giv en estimeret CGC-karakter samt en konstruktiv, ærlig begrundelse på dansk i et skarpt format med overskrifter. Husk at nævne klart, at vurderingen udelukkende er vejledende.` },
-                        { inline_data: { mime_type: 'image/jpeg', data: base64Data } }
+                        { inline_data: { mime_type: mimeType, data: base64Data } }
                     ]
                 }]
             })
@@ -213,7 +214,8 @@ app.post('/api/ai-grade', async (req, res) => {
 
         if (!response.ok) {
             const errData = await response.json();
-            throw new Error(`Gemini API fejl: ${JSON.stringify(errData)}`);
+            const msg = errData?.error?.message || JSON.stringify(errData);
+            throw new Error(`Gemini API fejl: ${msg}`);
         }
 
         const data = await response.json();
@@ -222,7 +224,7 @@ app.post('/api/ai-grade', async (req, res) => {
         res.json({ success: true, evaluation });
     } catch (err) {
         console.error('AI Grade Fejl:', err);
-        res.status(500).json({ error: 'Kunne ikke gennemføre AI-vurdering. Prøv igen senere.' });
+        res.status(500).json({ error: err.message || 'Kunne ikke gennemføre AI-vurdering.' });
     }
 });
 
