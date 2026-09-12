@@ -1,12 +1,57 @@
-<!doctype html><html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Poke Bros | CGC Grading Service</title><meta name="description" content="Send dine samlekort til The Poke Bros og få dem indsendt til CGC grading uden selv at skulle samle en stor submission."><link rel="stylesheet" href="style.css"><style>
-    /* Sikrer skarp, mørk tekst i formularer og bokse på forsiden */
-    .order-form label, .calculator label, .order-form input, .order-form textarea, .order-form select { color: #1a1a1a !important; }
-    .order-form input, .order-form textarea, .order-form select { background: #fff !important; border: 1px solid #ccc !important; color: #1a1a1a !important; padding: 10px !important; }
-    .section h2, .section h3, .section p, .calculator strong, .calculator span { color: #1a1a1a; }
-    .section.alt h2, .section.alt p { color: #1a1a1a; }
-</style></head><body>
+<!doctype html><html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Poke Bros | CGC Grading Service</title><meta name="description" content="Send dine samlekort til The Poke Bros og få dem indsendt til CGC grading uden selv at skulle samle en stor submission."><link rel="stylesheet" href="style.css">
+<style>
+    /* Styling til den svævende Pokéball (nederste hjørne) */
+    #pokeEasterEgg {
+        position: fixed; bottom: 25px; right: 25px; width: 60px; height: 60px;
+        background: linear-gradient(to bottom, #ff2a2a 0%, #ff2a2a 50%, #f0f0f0 50%, #f0f0f0 100%);
+        border-radius: 50%; border: 3px solid #1a1a1a;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.5); cursor: pointer; z-index: 9999;
+        display: flex; align-items: center; justify-content: center; transition: transform 0.3s ease;
+    }
+    #pokeEasterEgg::before {
+        content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        border-radius: 50%; box-shadow: inset 0 6px 12px rgba(255,255,255,0.4); pointer-events: none;
+    }
+    /* Midterbælte og knap på Pokéball */
+    .poke-belt {
+        position: absolute; top: 50%; left: 0; width: 100%; height: 8px;
+        background: #1a1a1a; transform: translateY(-50%);
+    }
+    .poke-button {
+        position: absolute; top: 50%; left: 50%; width: 18px; height: 18px;
+        background: #fff; border: 3px solid #1a1a1a; border-radius: 50%;
+        transform: translate(-50%, -50%); box-shadow: inset 0 0 0 2px #ddd;
+        z-index: 2;
+    }
+
+    /* Master Ball regnvejr (med M og lyserøde detaljer) */
+    @keyframes fall {
+        0% { transform: translateY(-60px) rotate(0deg); opacity: 1; }
+        100% { transform: translateY(105vh) rotate(360deg); opacity: 0; }
+    }
+    .falling-masterball {
+        position: fixed; top: -60px; width: 40px; height: 40px;
+        background: linear-gradient(to bottom, #7b2cbf 0%, #7b2cbf 50%, #f0f0f0 50%, #f0f0f0 100%);
+        border-radius: 50%; border: 2px solid #1a1a1a;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.4); z-index: 9998; pointer-events: none;
+        animation: fall linear forwards;
+    }
+    /* Master Ball bælte */
+    .falling-masterball::before {
+        content: ''; position: absolute; top: 50%; left: 0; width: 100%; height: 5px;
+        background: #1a1a1a; transform: translateY(-50%);
+    }
+    /* Master Ball knap */
+    .falling-masterball::after {
+        content: ''; position: absolute; top: 50%; left: 50%; width: 12px; height: 12px;
+        background: #fff; border: 2px solid #1a1a1a; border-radius: 50%;
+        transform: translate(-50%, -50%); z-index: 2;
+    }
+    #pokeEasterEgg:hover { transform: scale(1.15) rotate(15deg); }
+</style>
+</head><body>
 <header><a class="brand" href="#">THE POKE BROS</a><nav><a href="#how">Sådan virker det</a><a href="#prices">Priser</a><a href="#membership">Bliv en Poke Bro</a><a href="shop.html">Shop</a><a href="/selg.html">Sælg din samling</a><a href="#faq">FAQ</a><a href="track.html">Spor ordre</a><a href="#contact">Kontakt</a><a href="account.html" id="accountLink">Min konto</a></nav><a class="btn small" href="#order">Bestil grading</a></header>
-<main><section class="hero"><div class="hero-img"></div><div class="shade"></div><div class="hero-copy"><span class="eyebrow">CGC GRADING • NEMT FOR DANSKE SAMLERE</span><h1>Få dine kort graded<br>uden en stor submission.</h1><p>Send det antal kort, du ønsker, til The Poke Bros. Vi samler kundernes kort og håndterer submissionen til CGC.</p><div class="actions"><a class="btn" href="#order">Send kort til grading</a><a class="btn ghost" href="#how">Sådan fungerer det</a></div></div></section>
+<main><section class="hero"><div class="hero-img"></div><div class="shade"></div><div class="hero-copy"><span class="eyebrow">CGC GRADING • NEMT FOR DANSKE SAMLERE</span><h1>Få dine kort graded<br>uden en stor submission.</h1><p>Send het antal kort, du ønsker, til The Poke Bros. Vi samler kundernes kort og håndterer submissionen til CGC.</p><div class="actions"><a class="btn" href="#order">Send kort til grading</a><a class="btn ghost" href="#how">Sådan fungerer det</a></div></div></section>
 
 <!-- CGC Submission Progress Tracker -->
 <section style="background: #ffffff; padding: 25px 20px; border-bottom: 1px solid #e1e8ed; text-align: center;">
@@ -52,61 +97,19 @@
 
 <footer><b>THE POKE BROS</b><span>Uafhængig grading-indsendelsesservice • thepokebros.com</span><small>Pokémon og CGC er varemærker tilhørende deres respektive ejere. The Poke Bros er ikke tilknyttet eller sponsoreret af Pokémon Company. Eventuel relation til CGC bør beskrives i overensstemmelse med din konkrete medlems-/forhandleraftale.</small></footer>
 
-<!-- Svævende Pokéball / Masterball Easter Egg -->
-<div id="pokeEasterEgg" onclick="triggerMasterBallRain()" title="Klik for en overraskelse!" style="position: fixed; bottom: 25px; right: 25px; width: 55px; height: 55px; background: radial-gradient(circle at 30% 30%, #ff4d5a 0%, #cc0000 50%, #1a1a1a 52%, #1a1a1a 100%); border-radius: 50%; box-shadow: 0 4px 15px rgba(0,0,0,0.3); cursor: pointer; z-index: 9999; display: flex; align-items: center; justify-content: center; transition: transform 0.3s ease;">
-    <div style="width: 16px; height: 16px; background: #fff; border: 3px solid #1a1a1a; border-radius: 50%; box-shadow: inset 0 0 0 2px #ddd;"></div>
+<!-- Svævende rigtig Pokéball med bælte og knap -->
+<div id="pokeEasterEgg" onclick="triggerMasterBallRain()" title="Klik for en overraskelse!">
+    <div class="poke-belt"></div>
+    <div class="poke-button"></div>
 </div>
 
-<!-- Besked-boks der popper op -->
-<div id="masterBallModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 10000; text-align: center; max-width: 400px; width: 90%; border: 3px solid #7b2cbf;">
-    <h2 style="color: #7b2cbf; margin-top: 0;">⚡ MASTER BALL AKTIVERET! ⚡</h2>
-    <p style="color: #333; font-size: 15px;">Du fandt det nørdede påskeæg! Som ægte Pokémon Master får du <strong>10% rabat</strong> på din allerførste ordre.</p>
-    <p style="font-size: 14px; color: #666;">Brug rabatkoden ved checkout:</p>
-    <code style="background: #f1f1f1; padding: 6px 12px; font-size: 18px; font-weight: bold; color: #7b2cbf; border-radius: 4px; display: inline-block; margin: 10px 0;">MASTER2026</code><br>
-    <button onclick="closeMasterBallModal()" class="btn" style="background: #7b2cbf; margin-top: 10px;">Tak, lad mig fange dem alle!</button>
+<!-- Besked-boks -->
+<div id="masterBallModal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1a1a1a; color: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 10000; text-align: center; max-width: 400px; width: 90%; border: 3px solid #7b2cbf;">
+    <h2 style="color: #9d4edd; margin-top: 0;">⚡ MASTER BALL AKTIVERET! ⚡</h2>
+    <p style="font-size: 15px;">Du fandt det nørdede påskeæg! Som ægte Pokémon Master får du <strong>10% rabat</strong> på din allerførste ordre.</p>
+    <code style="background: #2a2a2a; padding: 6px 12px; font-size: 18px; font-weight: bold; color: #9d4edd; border-radius: 4px; display: inline-block; margin: 10px 0; border: 1px solid #7b2cbf;">MASTER2026</code><br>
+    <button onclick="closeMasterBallModal()" class="btn" style="background: #7b2cbf; color: #fff; margin-top: 10px;">Tak, lad mig fange dem alle!</button>
 </div>
-
-<style>
-@keyframes fall {
-    0% { transform: translateY(-50px) rotate(0deg); opacity: 1; }
-    100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
-}
-.falling-masterball {
-    position: fixed;
-    top: -50px;
-    width: 30px;
-    height: 30px;
-    background: radial-gradient(circle at 30% 30%, #9d4edd 0%, #5a189a 50%, #1a1a1a 52%);
-    border-radius: 50%;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-    z-index: 9998;
-    pointer-events: none;
-    animation: fall linear forwards;
-}
-.falling-masterball::after {
-    content: '';
-    position: absolute;
-    top: 11px;
-    left: 3px;
-    right: 3px;
-    height: 3px;
-    background: #1a1a1a;
-}
-.falling-masterball::before {
-    content: '';
-    position: absolute;
-    top: 10px;
-    left: 11px;
-    width: 8px;
-    height: 8px;
-    background: #fff;
-    border: 2px solid #1a1a1a;
-    border-radius: 50%;
-}
-#pokeEasterEgg:hover {
-    transform: scale(1.15) rotate(15deg);
-}
-</style>
 
 <script>
 function triggerMasterBallRain() {
