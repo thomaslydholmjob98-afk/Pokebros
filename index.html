@@ -1,29 +1,29 @@
 <!doctype html><html lang="da"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Poke Bros | CGC Grading Service</title><meta name="description" content="Send dine samlekort til The Poke Bros og få dem indsendt til CGC grading uden selv at skulle samle en stor submission."><link rel="stylesheet" href="style.css">
 <style>
-    /* Svævende Master Ball & Genert flugt-effekt */
+    /* Svævende Master Ball & Genert flugt-effekt (Større størrelse) */
     @keyframes floatMasterBall {
         0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-15px); }
+        50% { transform: translateY(-18px); }
     }
     #easterEggContainer {
-        position: fixed; bottom: 25px; right: 25px; width: 65px; height: 65px;
+        position: fixed; bottom: 30px; right: 30px; width: 85px; height: 85px;
         z-index: 9999; 
         animation: floatMasterBall 3.5s ease-in-out infinite;
-        padding: 30px; 
-        margin: -30px; 
+        padding: 40px; 
+        margin: -40px; 
     }
     #pokeEasterEgg {
         width: 100%; height: 100%; position: relative;
         cursor: pointer; display: flex; align-items: center; justify-content: center;
         transition: transform 0.4s ease-out;
-        filter: drop-shadow(0 5px 12px rgba(0,0,0,0.5));
+        filter: drop-shadow(0 6px 16px rgba(0,0,0,0.6));
     }
     #pokeEasterEgg:hover { transform: scale(1.15) rotate(10deg); }
 
     /* Master Ball regnvejr efter klik */
     @keyframes fall { 0% { transform: translateY(-60px) rotate(0deg); opacity: 1; } 100% { transform: translateY(105vh) rotate(360deg); opacity: 0; } }
     .falling-masterball {
-        position: fixed; top: -60px; width: 45px; height: 45px;
+        position: fixed; top: -60px; width: 50px; height: 50px;
         z-index: 9998; pointer-events: none; animation: fall linear forwards;
         filter: drop-shadow(0 3px 8px rgba(0,0,0,0.4));
     }
@@ -96,27 +96,19 @@
 
 <footer><b>THE POKE BROS</b><span>Uafhængig grading-indsendelsesservice • thepokebros.com</span><small>Pokémon og CGC er varemærker tilhørende deres respektive ejere. The Poke Bros er ikke tilknyttet eller sponsoreret af Pokémon Company.</small></footer>
 
-<!-- Eksakt Nøjagtig Master Ball (SVG-baseret med genert flugt-effekt) -->
+<!-- Stor, svævende & genert Master Ball -->
 <div id="easterEggContainer">
     <div id="pokeEasterEgg" onclick="triggerMasterBallRain()" title="Klik for en overraskelse!">
         <svg viewBox="0 0 100 100" style="width: 100%; height: 100%; display: block;">
-            <!-- Hvid bund / ydre kant -->
             <circle cx="50" cy="50" r="48" fill="#ffffff" stroke="#1a1a1a" stroke-width="4"/>
-            <!-- Lilla top -->
             <path d="M 2 50 A 48 48 0 0 1 98 50 Z" fill="#7b2cbf"/>
-            <!-- Midterlinje -->
             <line x1="2" y1="50" x2="98" y2="50" stroke="#1a1a1a" stroke-width="4"/>
-            <!-- Venstre lyserøde knop -->
             <ellipse cx="28" cy="30" rx="15" ry="11" transform="rotate(-20 28 30)" fill="#ff66cc" stroke="#1a1a1a" stroke-width="3"/>
             <ellipse cx="26" cy="28" rx="10" ry="6" transform="rotate(-20 26 28)" fill="#ff99ee" opacity="0.7"/>
-            <!-- Højre lyserøde knop -->
             <ellipse cx="72" cy="30" rx="15" ry="11" transform="rotate(20 72 30)" fill="#ff66cc" stroke="#1a1a1a" stroke-width="3"/>
             <ellipse cx="74" cy="28" rx="10" ry="6" transform="rotate(20 74 28)" fill="#ff99ee" opacity="0.7"/>
-            <!-- Hvidt M -->
             <path d="M 37 41 L 43 25 L 50 36 L 57 25 L 63 41 L 58 41 L 53 31 L 50 36 L 47 31 L 42 41 Z" fill="#ffffff"/>
-            <!-- Center knap ydre -->
             <circle cx="50" cy="50" r="13" fill="#1a1a1a"/>
-            <!-- Center knap inder -->
             <circle cx="50" cy="50" r="7" fill="#ffffff" stroke="#1a1a1a" stroke-width="2"/>
         </svg>
     </div>
@@ -131,7 +123,6 @@
 </div>
 
 <script>
-// "Genert" Master Ball - Skubber bolden forsigtigt væk, når musen kommer i nærheden
 const eggContainer = document.getElementById('easterEggContainer');
 const egg = document.getElementById('pokeEasterEgg');
 
@@ -140,16 +131,15 @@ eggContainer.addEventListener('mousemove', (e) => {
     const x = e.clientX - rect.left - (rect.width / 2);
     const y = e.clientY - rect.top - (rect.height / 2);
     
-    const moveX = (x < 0 ? 15 : -15);
-    const moveY = (y < 0 ? 15 : -15);
+    const moveX = (x < 0 ? 18 : -18);
+    const moveY = (y < 0 ? 18 : -18);
     
-    egg.style.transform = `translate(${moveX}px, ${moveY}px) scale(1.05) rotate(${-moveX}deg)`;
+    egg.style.transform = `translate(${moveX}px, ${moveY}px) scale(1.1) rotate(${-moveX}deg)`;
 });
 
 eggContainer.addEventListener('mouseleave', () => {
     egg.style.transform = `translate(0, 0) scale(1) rotate(0deg)`;
 });
-
 
 async function loadPoolStatus() {
     try {
