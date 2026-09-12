@@ -396,7 +396,30 @@ app.post('/api/checkout', async (req, res) => {
         res.status(500).json({ error: 'Kunne ikke oprette betaling.' });
     }
 });
+// SLET PRODUKT
+app.delete('/api/admin/products/:id', checkAdmin, async (req, res) => {
+    const { id } = req.params;
+    try {
+        await pool.query('DELETE FROM products WHERE id = $1', [id]);
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Fejl ved sletning af produkt:', e.message);
+        res.status(500).json({ error: 'Kunne ikke slette produkt' });
+    }
+});
 
+// OPDATÉR PRODUKT STATUS (FX SOLGT)
+app.patch('/api/admin/products/:id', checkAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+    try {
+        await pool.query('UPDATE products SET status = $1 WHERE id = $2', [status, id]);
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Fejl ved opdatering af produkt status:', e.message);
+        res.status(500).json({ error: 'Kunne ikke opdatere status' });
+    }
+});
 app.listen(port, () => {
     console.log(`Server kører på port ${port}`);
 });
