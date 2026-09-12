@@ -162,20 +162,29 @@ app.patch('/api/admin/users/:id', checkAdmin, async (req, res) => {
     }
 });
 
-// ADMIN: SLET BRUGER
+// ADMIN: FULD SLETNING AF BRUGER OG ALT DERES DATA
 app.delete('/api/admin/users/:id', checkAdmin, async (req, res) => {
     const userId = req.params.id;
     try {
+        // 1. Hent brugerens e-mail for at kunne slette relaterede ordrer
         const userRes = await pool.query('SELECT email FROM users WHERE id = $1', [userId]);
         if (userRes.rows.length > 0) {
-            const email = userRes.rows[0].email;
-            await pool.query('DELETE FROM orders WHERE customer_email = $1', [email]);
+            const userEmail = userRes.rows[0].email;
+            
+            // Slet alle ordrer tilknyttet denne e-mail
+            await pool.query('DELETE FROM orders WHERE customer_email = $1', [userEmail]);
         }
+
+        // 2. Slet aktive aktive sessioner, hvor brugeren er logget ind (så de logges ud med det samme)
+        await pool.query(`DELETE FROM session WHERE sess::text LIKE $1`, [`%"userId":${userId}%`]);
+
+        // 3. Slet selve brugeren fra databasen
         await pool.query('DELETE FROM users WHERE id = $1', [userId]);
-        res.json({ success: true });
+
+        res.json({ success: true, message: 'Bruger og al tilhørende data er slettet.' });
     } catch (e) {
-        console.error('Sletning af bruger fejlede:', e);
-        res.status(500).json({ error: 'Kunne ikke slette bruger' });
+        console.error('Fuld sletning af bruger fejlede:', e);
+        res.status(500).json({ error: 'Kunne ikke slette bruger: ' + e.message });
     }
 });
 
@@ -227,7 +236,11 @@ app.get('/api/auth/me', async (req, res) => {
     if (!req.session.userId) return res.json({ loggedIn: false });
     try {
         const result = await pool.query('SELECT id, name, email, phone, membership_active, membership_plan FROM users WHERE id = $1', [req.session.userId]);
-        if (result.rows.length === 0) return res.json({ loggedIn: false });
+        if (result.rows.length === 0) {
+            // Hvis brugeren er slettet fra databasen, men sessionen stadig findes
+            req.session.destroy(() => {});
+            return res.json({ loggedIn: false });
+        }
 
         const user = result.rows[0];
         res.json({
@@ -255,7 +268,10 @@ app.get('/api/account', async (req, res) => {
     if (!req.session.userId) return res.status(401).json({ error: 'Ikke logget ind' });
     try {
         const userRes = await pool.query('SELECT id, name, email, phone, membership_active, membership_plan FROM users WHERE id = $1', [req.session.userId]);
-        if (userRes.rows.length === 0) return res.status(401).json({ error: 'Bruger ikke fundet' });
+        if (userRes.rows.length === 0) {
+            req.session.destroy(() => {});
+            return res.status(401).json({ error: 'Bruger ikke fundet' });
+        }
         const user = userRes.rows[0];
 
         const ordersRes = await pool.query('SELECT * FROM orders WHERE customer_email = $1 ORDER BY created_at DESC', [user.email]);
