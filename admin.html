@@ -24,6 +24,11 @@
         .login-box input { width: 100%; padding: 12px; margin: 15px 0; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 6px; box-sizing: border-box; }
         textarea.gen-output { width: 100%; height: 200px; padding: 15px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 6px; font-family: monospace; font-size: 14px; box-sizing: border-box; resize: vertical; }
         .success-msg { color: #2ecc71; font-weight: bold; font-size: 14px; margin-top: 10px; display: none; }
+        
+        /* Billedeupload styling */
+        .upload-field { border: 2px dashed #333; border-radius: 8px; padding: 20px; text-align: center; background: #1a1e29; cursor: pointer; transition: border-color 0.2s; margin-top: 5px; }
+        .upload-field:hover { border-color: #e63946; }
+        .upload-preview { max-height: 140px; border-radius: 6px; margin-top: 10px; display: none; margin-left: auto; margin-right: auto; }
     </style>
 </head>
 <body>
@@ -65,6 +70,27 @@
             </div>
         </div>
 
+        <!-- Salgshenvendelser Sektion -->
+        <div class="admin-card">
+            <h2>Indkomne Salgshenvendelser (Sælg din samling)</h2>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Dato</th>
+                            <th>Navn</th>
+                            <th>Kontakt</th>
+                            <th>Beskrivelse af Samling</th>
+                            <th>Forventet Pris</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sellRequestsTableBody">
+                        <tr><td colspan="5" style="text-align: center; color: #888;">Henter salgshenvendelser...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <div class="admin-card">
             <h2>Styr Puljetæller manuelt</h2>
             <p style="color: #aaa; font-size: 14px; margin-bottom: 15px;">Indtast det antal kort, der skal vises i puljen på forsiden:</p>
@@ -74,26 +100,35 @@
             </div>
         </div>
 
+        <!-- Produkt Oprettelse med Direkte Billede-upload -->
         <div class="admin-card">
             <h2>Opret nyt produkt i Shoppen</h2>
-            <form id="productForm" onsubmit="createProduct(event)" class="form-inline" style="gap: 15px; align-items: flex-end;">
+            <form id="productForm" onsubmit="createProduct(event)" style="display: flex; flex-direction: column; gap: 15px;">
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <div style="flex: 2; min-width: 200px;">
+                        <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Titel *</label>
+                        <input type="text" id="prodTitle" placeholder="Fx Charizard Base Set Holo PSA 9" required style="width: 100%; padding: 10px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; box-sizing: border-box;">
+                    </div>
+                    <div style="flex: 1; min-width: 140px;">
+                        <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Kategori</label>
+                        <input type="text" id="prodCategory" placeholder="Fx Slabs / Pokémon" style="width: 100%; padding: 10px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; box-sizing: border-box;">
+                    </div>
+                    <div style="flex: 1; min-width: 100px;">
+                        <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Pris (DKK) *</label>
+                        <input type="number" id="prodPrice" placeholder="1499" required style="width: 100%; padding: 10px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; box-sizing: border-box;">
+                    </div>
+                </div>
+
                 <div>
-                    <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Titel</label>
-                    <input type="text" name="title" placeholder="Fx Charizard PSA 10" required style="width: 220px;">
+                    <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Produktbillede (Upload direkte fra mobil/PC)</label>
+                    <input type="file" id="prodImageFile" accept="image/*" onchange="handleProductImageSelect(event)" style="display: none;">
+                    <div class="upload-field" onclick="document.getElementById('prodImageFile').click()">
+                        <p id="uploadPrompt" style="margin:0; color:#ccc; font-size:14px; font-weight:bold;">📸 Klik her for at vælge eller tage et billede fra din enhed</p>
+                        <img id="prodImagePreview" class="upload-preview" alt="Produkt preview">
+                    </div>
                 </div>
-                <div>
-                    <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Kategori</label>
-                    <input type="text" name="category" placeholder="Fx Slabs / Kort" style="width: 140px;">
-                </div>
-                <div>
-                    <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Pris (DKK)</label>
-                    <input type="number" name="priceDkk" placeholder="1499" required style="width: 100px;">
-                </div>
-                <div style="flex: 1; min-width: 200px;">
-                    <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Billede URL</label>
-                    <input type="text" name="imageUrl" placeholder="https://..." style="width: 100%;">
-                </div>
-                <button type="submit" class="btn" style="padding: 10px 20px;">Opret produkt</button>
+
+                <button type="submit" id="createProductBtn" class="btn" style="padding: 12px 24px; align-self: flex-start; margin-top: 5px;">Opret produkt i shoppen →</button>
             </form>
         </div>
 
@@ -140,6 +175,7 @@
 
     <script>
         let adminPass = localStorage.getItem('tpb_admin_pass') || '';
+        let productBase64Image = '';
 
         if (adminPass) {
             verifyAndLoadDashboard();
@@ -174,6 +210,7 @@
                 document.getElementById('adminContent').style.display = 'block';
 
                 loadDashboardData();
+                loadSellRequests();
             } catch (err) {
                 errorEl.textContent = err.message;
                 if (err.message === 'Forkert adgangskode') {
@@ -185,6 +222,100 @@
         function logoutAdmin() {
             localStorage.removeItem('tpb_admin_pass');
             location.reload();
+        }
+
+        function handleProductImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                productBase64Image = e.target.result;
+                const preview = document.getElementById('prodImagePreview');
+                const promptText = document.getElementById('uploadPrompt');
+                preview.src = productBase64Image;
+                preview.style.display = 'block';
+                promptText.textContent = '✅ Billedet er valgt! (Klik for at skifte)';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function createProduct(e) {
+            e.preventDefault();
+            const title = document.getElementById('prodTitle').value.trim();
+            const category = document.getElementById('prodCategory').value.trim();
+            const priceDkk = document.getElementById('prodPrice').value.trim();
+
+            if (!title || !priceDkk) {
+                alert('Indtast venligst både titel og pris.');
+                return;
+            }
+
+            const btn = document.getElementById('createProductBtn');
+            btn.disabled = true;
+            btn.textContent = 'Opretter produkt...';
+
+            try {
+                const res = await fetch('/api/admin/products', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json', 
+                        'x-admin-password': adminPass 
+                    },
+                    body: JSON.stringify({
+                        title,
+                        category: category || 'Diverse',
+                        priceDkk: Number(priceDkk),
+                        imageUrl: productBase64Image
+                    })
+                });
+                
+                const resData = await res.json();
+                if (!res.ok) {
+                    throw new Error(resData.error || 'Fejl ved oprettelse af produkt');
+                }
+                
+                alert('Produkt oprettet succesfuldt i shoppen!');
+                
+                document.getElementById('productForm').reset();
+                document.getElementById('prodImagePreview').style.display = 'none';
+                document.getElementById('uploadPrompt').textContent = '📸 Klik her for at vælge eller tage et billede fra din enhed';
+                productBase64Image = '';
+            } catch (err) { 
+                alert('Kunne ikke oprette produkt: ' + err.message); 
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Opret produkt i shoppen →';
+            }
+        }
+
+        async function loadSellRequests() {
+            const tbody = document.getElementById('sellRequestsTableBody');
+            try {
+                const res = await fetch('/api/admin/sell-requests', { headers: { 'x-admin-password': adminPass } });
+                if (!res.ok) return;
+                const data = await res.json();
+                
+                if (!data.requests || data.requests.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888;">Ingen henvendelser endnu.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.requests.map(r => `
+                    <tr>
+                        <td style="white-space:nowrap; color:#888;">${new Date(r.created_at).toLocaleDateString('da-DK')}</td>
+                        <td><b>${r.name}</b></td>
+                        <td>
+                            <a href="mailto:${r.email}" style="color:#e63946;">${r.email}</a><br>
+                            <small style="color:#aaa;">Tlf: ${r.phone || '-'}</small>
+                        </td>
+                        <td style="max-width:300px; font-size:13px; color:#ccc;">${r.details || '-'}</td>
+                        <td><b>${r.expected_price || '-'}</b></td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ff4d5a;">Fejl ved hentning.</td></tr>';
+            }
         }
 
         async function loadDashboardData() {
@@ -264,30 +395,6 @@
                 loadDashboardData();
             } catch (e) { 
                 alert('Kunne ikke opdatere pulje: ' + e.message); 
-            }
-        }
-
-        async function createProduct(e) {
-            e.preventDefault();
-            const form = e.target;
-            const data = Object.fromEntries(new FormData(form));
-            try {
-                const res = await fetch('/api/admin/products', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json', 
-                        'x-admin-password': adminPass 
-                    },
-                    body: JSON.stringify(data)
-                });
-                const resData = await res.json();
-                if (!res.ok) {
-                    throw new Error(resData.error || 'Fejl ved oprettelse af produkt');
-                }
-                alert('Produkt oprettet succesfuldt!');
-                form.reset();
-            } catch (e) { 
-                alert('Kunne ikke oprette produkt: ' + e.message); 
             }
         }
 
