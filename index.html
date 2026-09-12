@@ -401,7 +401,9 @@ function calc(){
     g.textContent=(n*p).toLocaleString('da-DK')+' kr.';
     shippingTotalEl.textContent=shipPrice+' kr.';
     t.textContent=(n*p+shipPrice).toLocaleString('da-DK')+' kr.';
-    note.textContent=notes[tier.value]+' Du betaler selv forsendelsen af kortene til The Poke Bros.'+(me?.membership?.active?' Aktiv Poke Bro-medlemspris er anvendt.':'');
+    
+    const isMemberActive = me?.membership?.active || me?.membership?.plan === 'free';
+    note.textContent=notes[tier.value]+' Du betaler selv forsendelsen af kortene til The Poke Bros.'+(isMemberActive?' Aktiv Poke Bro-medlemspris er anvendt.':'');
 }
 
 document.getElementById('minus').onclick=()=>{q.value=Math.max(1,+q.value-1);calc()};
@@ -420,9 +422,12 @@ async function loadAccount(){
             form.elements.name.value=me.name||'';
             document.getElementById('userEmailInput').value=me.email||'';
             form.elements.phone.value=me.phone||'';
-            if(me.membership?.active){
+            
+            const isMemberActive = me.membership?.active || me.membership?.plan === 'free';
+            if(isMemberActive){
                 prices={bulk:249,economy:Math.round(299*.95),standard:Math.round(499*.95),express:Math.round(899*.95),walkthrough:Math.round(2199*.95),unlimited:Math.round(2199*.95)};
-                document.querySelector('#membership .lead').textContent='Du er aktiv Poke Bro. Din medlemspris anvendes automatisk, når du bestiller med din konto.';
+                const leadText = me.membership?.plan === 'free' ? 'Du har et Gratis VIP Poke Bro-medlemskab. Medlemsprisen anvendes automatisk.' : 'Du er aktiv Poke Bro. Din medlemspris anvendes automatisk, når du bestiller med din konto.';
+                document.querySelector('#membership .lead').textContent=leadText;
             }
         } else {
             accountLink.textContent='Log ind';
