@@ -34,7 +34,7 @@ async function initDb() {
                 name VARCHAR(255),
                 email VARCHAR(255) UNIQUE NOT NULL,
                 phone VARCHAR(50),
-                password VARCHAR(255),
+                password_hash VARCHAR(255),
                 membership_active BOOLEAN DEFAULT false,
                 membership_plan VARCHAR(50),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -81,19 +81,14 @@ async function initDb() {
             );
         `);
 
-        // Sørg for at id har en sekvens hvis tabellen allerede fandtes uden SERIAL
+        // Sørg for at id har en sekvens og at password_hash kolonnen findes
         await pool.query(`
             CREATE SEQUENCE IF NOT EXISTS users_id_seq;
             ALTER TABLE users ALTER COLUMN id SET DEFAULT nextval('users_id_seq');
             ALTER SEQUENCE users_id_seq OWNED BY users.id;
-        `).catch(() => {});
-
-        await pool.query(`
-            ALTER TABLE products ALTER COLUMN image_url TYPE TEXT;
-            ALTER TABLE products ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'til salg';
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255);
             ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(255);
             ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
-            ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255);
             ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_active BOOLEAN DEFAULT false;
             ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_plan VARCHAR(50);
         `).catch(() => {});
@@ -152,7 +147,7 @@ app.post('/api/auth/register', async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const result = await pool.query(
-            'INSERT INTO users (name, email, phone, password) VALUES ($1, $2, $3, $4) RETURNING id, name, email, phone, membership_active, membership_plan',
+            'INSERT INTO users (name, email, phone, password_hash) VALUES ($1, $2, $3, $4) RETURNING id, name, email, phone, membership_active, membership_plan',
             [name || '', email, phone || '', hashedPassword]
         );
 
@@ -171,12 +166,12 @@ app.post('/api/auth/login', async (req, res) => {
         if (!email || !password) return res.status(400).json({ error: 'Indtast e-mail og adgangskode.' });
 
         const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-        if (result.rows.length === 0 || !result.rows[0].password) {
+        if (result.rows.length === 0 || !result.rows[0].password_hash) {
             return res.status(401).json({ error: 'Ugyldig e-mail eller adgangskode.' });
         }
 
         const user = result.rows[0];
-        const match = await bcrypt.compare(password, user.password);
+        const match = await bcrypt.compare(password, user.password_hash);
         if (!match) return res.status(401).json({ error: 'Ugyldig e-mail eller adgangskode.' });
 
         req.session.userId = user.id;
@@ -535,7 +530,7 @@ app.post('/api/checkout', async (req, res) => {
             [orderId, name, email, phone, address, postal, city, qty, tier, shippingMethod, totalDkk]
         );
 
-        res.json({ url: sessionStrip.url });
+        res.json({ url: sessionStripe.url });
     } catch (err) {
         res.status(500).json({ error: 'Kunne ikke oprette betaling.' });
     }
