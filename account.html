@@ -59,22 +59,28 @@
             try {
                 const res = await fetch('/api/account');
                 if (!res.ok) {
-                    // Hvis ikke logget ind, send til login-siden
                     window.location.href = 'login.html';
                     return;
                 }
                 const data = await res.json();
                 
-                // Vis profil-info
                 document.getElementById('userName').textContent = data.user.name;
                 document.getElementById('userEmail').textContent = data.user.email;
                 
-                const memberDesc = data.user.membership.active 
-                    ? `Aktiv (${data.user.membership.plan === 'yearly' ? 'Årskort' : 'Månedskort'}) - Du har fordelagtige medlemspriser!`
-                    : 'Ingen aktivt medlemskab. (Tilmeld dig på forsiden for at få rabat på Bulk-grading).';
-                document.getElementById('memberDesc').textContent = memberDesc;
+                const m = data.user.membership;
+                let memberText = 'Ingen aktivt medlemskab. (Tilmeld dig på forsiden for at få rabat på Bulk-grading).';
 
-                // Vis ordrer
+                if (m && (m.active || m.plan === 'free')) {
+                    if (m.plan === 'free') {
+                        memberText = '🎁 Gratis VIP Medlem (Aktiv) – Du har fulde medlemsfordele og rabatter uden betaling!';
+                    } else if (m.plan === 'yearly') {
+                        memberText = 'Aktiv (Årskort) – Du har fordelagtige medlemspriser!';
+                    } else {
+                        memberText = 'Aktiv (Månedskort) – Du har fordelagtige medlemspriser!';
+                    }
+                }
+                document.getElementById('memberDesc').textContent = memberText;
+
                 const list = document.getElementById('ordersList');
                 if (!data.orders || data.orders.length === 0) {
                     list.innerHTML = '<p style="color: #888;">Du har endnu ikke oprettet nogen ordrer.</p>';
