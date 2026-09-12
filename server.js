@@ -194,12 +194,11 @@ app.post('/api/ai-grade', async (req, res) => {
         const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
         if (!apiKey) return res.status(503).json({ error: 'AI-vurdering er ikke konfigureret på serveren endnu (GEMINI_API_KEY mangler på Render).' });
 
-        // Udtræk dynamisk MIME-type (png, jpeg, webp) og rå base64-data
         const mimeMatch = imageBase64.match(/^data:(image\/\w+);base64,/);
         const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
         const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, '');
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
