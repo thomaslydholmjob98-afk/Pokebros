@@ -13,20 +13,15 @@
         .stat-card { background: #111318; border: 1px solid #222; border-radius: 10px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
         .stat-card span { font-size: 13px; color: #888; text-transform: uppercase; display: block; margin-bottom: 5px; }
         .stat-card h3 { font-size: 24px; color: #fff; margin: 0; }
-        
         .admin-card { background: #111318; border: 1px solid #222; border-radius: 12px; padding: 25px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .admin-card h2 { color: #e63946; margin-top: 0; margin-bottom: 20px; }
-        
         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
         table th, table td { padding: 12px; border-bottom: 1px solid #222; text-align: left; }
         table th { background: #1a1e29; color: #aaa; }
-        
         .form-inline { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .form-inline input, .form-inline select { padding: 8px 12px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px; }
-        
         .login-box { max-width: 400px; margin: 100px auto; background: #111318; padding: 40px; border-radius: 12px; border: 1px solid #222; text-align: center; }
         .login-box input { width: 100%; padding: 12px; margin: 15px 0; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 6px; box-sizing: border-box; }
-        
         textarea.gen-output { width: 100%; height: 200px; padding: 15px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 6px; font-family: monospace; font-size: 14px; box-sizing: border-box; resize: vertical; }
         .success-msg { color: #2ecc71; font-weight: bold; font-size: 14px; margin-top: 10px; display: none; }
     </style>
@@ -51,7 +46,6 @@
             <button onclick="logoutAdmin()" class="btn ghost" style="padding: 8px 16px;">Log ud</button>
         </div>
 
-        <!-- Statistik Overblik -->
         <div class="stats-grid">
             <div class="stat-card">
                 <span>Omsætning (Betalt)</span>
@@ -71,17 +65,14 @@
             </div>
         </div>
 
-        <!-- Pulje Styring Sektion -->
         <div class="admin-card">
             <h2>Styr Puljetæller manuelt</h2>
-            <p style="color: #aaa; font-size: 14px;">Hvis du vil overstyre antallet af kort vist i puljen på forsiden, kan du indtaste det herunder.</p>
             <div class="form-inline" style="margin-top: 15px;">
                 <input type="number" id="manualPoolInput" placeholder="Fx 18" style="width: 150px;">
                 <button onclick="updatePoolStatus()" class="btn" style="padding: 8px 16px;">Opdatér pulje</button>
             </div>
         </div>
 
-        <!-- Opret Produkt i Shop -->
         <div class="admin-card">
             <h2>Opret nyt produkt i Shoppen</h2>
             <form id="productForm" onsubmit="createProduct(event)" class="form-inline" style="gap: 15px; align-items: flex-end;">
@@ -105,7 +96,6 @@
             </form>
         </div>
 
-        <!-- Ordrer Oversigt -->
         <div class="admin-card">
             <h2>Ordrer</h2>
             <div style="overflow-x: auto;">
@@ -127,11 +117,8 @@
             </div>
         </div>
 
-        <!-- Facebook & Discord Opslag Generator -->
         <div class="admin-card">
             <h2>Sociale Medier Opslag Generator</h2>
-            <p style="color: #aaa; font-size: 14px; margin-bottom: 20px;">Generér hurtigt et opslag til Facebook-grupper eller Discord, når I samler kort til næste pulje.</p>
-            
             <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
                 <div style="flex: 1; min-width: 220px;">
                     <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Antal kort i puljen</label>
@@ -142,14 +129,11 @@
                     <input type="text" id="genNote" value="Husk koden MASTER2026 for 10% rabat på din første ordre!" oninput="generatePost()" style="width: 100%; padding: 10px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 4px;">
                 </div>
             </div>
-
             <div style="margin-bottom: 15px;">
-                <label style="display:block; font-size:12px; color:#aaa; margin-bottom:5px;">Genereret tekst</label>
                 <textarea id="genOutput" class="gen-output" readonly></textarea>
             </div>
-            
             <button onclick="copyToClipboard()" class="btn">Kopiér opslag til udklipsholder</button>
-            <p id="copySuccess" class="success-msg">Opslaget er kopieret! Du kan nu klistre det ind på Facebook eller Discord.</p>
+            <p id="copySuccess" class="success-msg">Opslaget er kopieret!</p>
         </div>
     </main>
 
@@ -291,7 +275,6 @@
         function generatePost() {
             const count = document.getElementById('genPoolCount').value || 0;
             const note = document.getElementById('genNote').value;
-
             const text = `🔥 CGC GRADING MED THE POKE BROS 🔥
 
 Vil du have dine Pokémon- eller One Piece-kort graded hos CGC uden at skulle samle en stor submission selv? Hos The Poke Bros kan du sende fra bare 1 kort!
@@ -309,7 +292,6 @@ Læs mere, se priser og bestil direkte på vores sikre platform:
 👉 https://www.thepokebros.com
 
 Pak altid dine kort sikkert i sleeve og toploader! 🚀`;
-
             document.getElementById('genOutput').value = text;
         }
 
@@ -317,7 +299,6 @@ Pak altid dine kort sikkert i sleeve og toploader! 🚀`;
             const textarea = document.getElementById('genOutput');
             textarea.select();
             navigator.clipboard.writeText(textarea.value);
-            
             const msg = document.getElementById('copySuccess');
             msg.style.display = 'block';
             setTimeout(() => { msg.style.display = 'none'; }, 3000);
