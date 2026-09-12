@@ -13,7 +13,6 @@ const pool = new Pool({
     ssl: { rejectUnauthorized: false }
 });
 
-// Automatisk oprettelse og opdatering af databasetabeller
 async function initDb() {
     try {
         await pool.query(`
@@ -82,7 +81,13 @@ async function initDb() {
             );
         `);
 
-        // Sikr at alle nødvendige kolonner findes i eksisterende tabeller
+        // Sørg for at id har en sekvens hvis tabellen allerede fandtes uden SERIAL
+        await pool.query(`
+            CREATE SEQUENCE IF NOT EXISTS users_id_seq;
+            ALTER TABLE users ALTER COLUMN id SET DEFAULT nextval('users_id_seq');
+            ALTER SEQUENCE users_id_seq OWNED BY users.id;
+        `).catch(() => {});
+
         await pool.query(`
             ALTER TABLE products ALTER COLUMN image_url TYPE TEXT;
             ALTER TABLE products ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'til salg';
@@ -137,7 +142,6 @@ app.post('/api/admin/login', (req, res) => {
     return res.status(401).json({ error: 'Forkert adgangskode' });
 });
 
-// BRUGER AUTHENTICATION & KONTO DATA
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { name, email, phone, password } = req.body;
@@ -167,7 +171,9 @@ app.post('/api/auth/login', async (req, res) => {
         if (!email || !password) return res.status(400).json({ error: 'Indtast e-mail og adgangskode.' });
 
         const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-        if (result.rows.length === 0) return res.status(401).json({ error: 'Ugyldig e-mail eller adgangskode.' });
+        if (result.rows.length === 0 || !result.rows[0].password) {
+            return res.status(401).json({ error: 'Ugyldig e-mail eller adgangskode.' });
+        }
 
         const user = result.rows[0];
         const match = await bcrypt.compare(password, user.password);
@@ -252,7 +258,6 @@ app.get('/api/account', async (req, res) => {
     }
 });
 
-// AFSENDELSE AF MAIL VIA BREVO REST API
 async function sendBrevoEmail({ name, email, phone, details, expectedPrice }) {
     const brevoApiKey = process.env.BREVO_API_KEY;
     if (!brevoApiKey) return;
@@ -320,7 +325,6 @@ app.get('/api/admin/sell-requests', checkAdmin, async (req, res) => {
     }
 });
 
-// AI KORT-VURDERING
 app.post('/api/ai-grade', async (req, res) => {
     try {
         const { frontImageBase64, backImageBase64, cardName } = req.body || {};
@@ -365,7 +369,6 @@ app.post('/api/ai-grade', async (req, res) => {
     }
 });
 
-// PULJE STATUS API
 app.get('/api/pool-status', async (req, res) => {
     try {
         const result = await pool.query('SELECT count FROM pool_status WHERE id = 1');
@@ -532,7 +535,7 @@ app.post('/api/checkout', async (req, res) => {
             [orderId, name, email, phone, address, postal, city, qty, tier, shippingMethod, totalDkk]
         );
 
-        res.json({ url: sessionStripe.url });
+        res.json({ url: sessionStrip.url });
     } catch (err) {
         res.status(500).json({ error: 'Kunne ikke oprette betaling.' });
     }
