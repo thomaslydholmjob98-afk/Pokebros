@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="da">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>AI Kort-Vurdering (Pre-Grade) | The Poke Bros</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .ai-container { max-width: 800px; margin: 40px auto; padding: 0 20px; color: #fff; }
+        .ai-card { background: #111318; border: 1px solid #222; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .ai-card h2 { color: #e63946; margin-top: 0; }
+        .upload-box { border: 2px dashed #333; border-radius: 8px; padding: 30px; text-align: center; background: #1a1e29; cursor: pointer; transition: border-color 0.3s; margin-bottom: 20px; }
+        .upload-box:hover { border-color: #e63946; }
+        .preview-img { max-width: 100%; max-height: 250px; border-radius: 6px; margin-top: 15px; display: none; }
+        .result-box { background: #1a1e29; border: 1px solid #333; border-radius: 8px; padding: 20px; margin-top: 20px; display: none; white-space: pre-wrap; line-height: 1.6; font-size: 15px; }
+        .disclaimer-box { background: #2c1a1a; border: 1px solid #e63946; padding: 12px 15px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; color: #ffb3b8; line-height: 1.4; }
+        .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; vertical-align: middle; margin-right: 8px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <header>
+        <a class="brand" href="index.html">THE POKE BROS</a>
+        <nav>
+            <a href="index.html">Forsiden</a>
+            <a href="shop.html">Shop</a>
+            <a href="ai-grade.html" style="color: #e63946;">AI Pre-Grade</a>
+            <a href="selg.html">Sælg samling</a>
+            <a href="track.html">Spor ordre</a>
+            <a href="account.html">Min konto</a>
+        </nav>
+        <a class="btn small" href="index.html#order">Bestil grading</a>
+    </header>
+
+    <main class="ai-container">
+        <div class="ai-card">
+            <h2>AI Kort-Vurdering (Pre-Grade)</h2>
+            <p style="color: #aaa; font-size: 14px;">Upload et skarpt billede af dit samlekort, og få en hurtig AI-analyse af kortets mulige stand.</p>
+            
+            <div class="disclaimer-box">
+                <b>⚠️ BEMÆRK:</b> Denne AI-vurdering er <b>udelukkende vejledende</b> og baseret på visuel analyse af billedet. Den kan ikke garantere en specifik karakter hos CGC.
+            </div>
+
+            <div style="margin: 20px 0;">
+                <label style="display:block; font-weight:bold; margin-bottom:8px; color:#ccc;">Kortets navn / sæt (valgfrit)</label>
+                <input type="text" id="cardNameInput" placeholder="Fx Charizard Base Set Holo" style="width: 100%; padding: 12px; border: 1px solid #333; border-radius: 6px; background: #1a1e29; color: #fff; font-size: 15px; box-sizing: border-box;">
+            </div>
+
+            <div class="upload-box" onclick="document.getElementById('cardImageFile').click()">
+                <p style="margin: 0; color: #ccc; font-weight: bold;">Klik her for at vælge eller uploade et billede af dit kort</p>
+                <small style="color: #777; display:block; margin-top: 5px;">Understøtter JPG, PNG</small>
+                <input type="file" id="cardImageFile" accept="image/*" style="display: none;" onchange="handleImageSelect(event)">
+                <img id="imagePreview" class="preview-img" alt="Kort preview">
+            </div>
+
+            <button onclick="submitForAIGrade()" id="analyzeBtn" class="btn" style="width: 100%; display: none;">Start AI Vurdering</button>
+            <p id="errorMsg" style="color: #ff4d5a; margin-top: 10px; font-size: 14px; text-align: center;"></p>
+
+            <div id="resultContainer" class="result-box">
+                <h3 style="color: #e63946; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px;">Vejledende AI-vurdering</h3>
+                <div id="evaluationText"></div>
+                <div style="margin-top: 25px; text-align: right;">
+                    <a href="index.html#order" class="btn" style="display: inline-block;">Klar til CGC? Bestil Bulk her →</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let base64Image = '';
+
+        function handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                base64Image = e.target.result;
+                const preview = document.getElementById('imagePreview');
+                preview.src = base64Image;
+                preview.style.display = 'block';
+                document.getElementById('analyzeBtn').style.display = 'block';
+                document.getElementById('resultContainer').style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function submitForAIGrade() {
+            if (!base64Image) return;
+
+            const btn = document.getElementById('analyzeBtn');
+            const errorMsg = document.getElementById('errorMsg');
+            const resultBox = document.getElementById('resultContainer');
+            const evalText = document.getElementById('evaluationText');
+            const cardName = document.getElementById('cardNameInput').value.trim();
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Analyserer kort med AI...';
+            errorMsg.textContent = '';
+            resultBox.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/ai-grade', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageBase64: base64Image, cardName })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Fejl under AI-analyse.');
+
+                evalText.innerHTML = data.evaluation.replace(/\n/g, '<br>');
+                resultBox.style.display = 'block';
+            } catch (err) {
+                errorMsg.textContent = err.message;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Start AI Vurdering';
+            }
+        }
+    </script>
+</body>
+</html>
