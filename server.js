@@ -929,20 +929,7 @@ app.post('/api/checkout', async (req, res) => {
 
         const orderId = 'TPB-' + Math.floor(100000 + Math.random() * 900000);
 
-        // Gem altid ordren i databasen først som 'pending' (eller 'paid' i testtilstand)
-        if (!process.env.STRIPE_SECRET_KEY) {
-            await pool.query(
-                `INSERT INTO orders (order_id, customer_name, customer_email, customer_phone, customer_address, customer_postal, customer_city, qty, tier, shipping_method, total_dkk, payment_status, status)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', 'modtaget')`,
-                [orderId, name || 'Test Samler', email || 'test@test.dk', phone || '12345678', address || 'Testvej 1', postal || '1000', city || 'København', qty || 1, tier || 'bulk', shippingMethod || 'postnord', totalDkk]
-            );
-            
-            // Når Stripe nøglen mangler (test), kalder vi med det samme vores fælles funktion, så mailen sendes og coins indsættes
-            await finalizeOrderAsPaid(orderId);
-
-            return res.json({ url: `/success.html?order=${orderId}` });
-        }
-
+        // Opret altid en rigtig Stripe Checkout Session
         const sessionStripe = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items: [{
@@ -976,10 +963,6 @@ app.post('/api/membership-checkout', async (req, res) => {
         if (!req.session.userId) return res.status(401).json({ error: 'Du skal være logget ind.' });
         const { plan } = req.body;
         const priceDkk = plan === 'yearly' ? 599 : 59;
-
-        if (!process.env.STRIPE_SECRET_KEY) {
-            return res.json({ url: `/account.html?membership=success` });
-        }
 
         const sessionStripe = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
