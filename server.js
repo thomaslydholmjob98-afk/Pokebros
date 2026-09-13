@@ -938,6 +938,30 @@ app.post('/api/checkout', async (req, res) => {
     }
 });
 
+// TEST-CHECKOUT RUTE UDEN STRIPE
+app.post('/api/test-checkout', async (req, res) => {
+    try {
+        const { name, email, phone, address, postal, city, qty, tier, shippingMethod } = req.body;
+        const basePrices = { bulk: 279, economy: 299, standard: 499, express: 899, walkthrough: 2199, unlimited: 2199 };
+        let pricePerCard = basePrices[tier] || 279;
+        let subtotal = (qty || 1) * pricePerCard;
+        let shipPrice = shippingMethod === 'hjemmelevering' ? 69 : 49;
+        let totalDkk = subtotal + shipPrice;
+
+        const orderId = 'TPB-TEST-' + Math.floor(100000 + Math.random() * 900000);
+
+        await pool.query(
+            `INSERT INTO orders (order_id, customer_name, customer_email, customer_phone, customer_address, customer_postal, customer_city, qty, tier, shipping_method, total_dkk, payment_status, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'paid', 'modtaget')`,
+            [orderId, name || 'Test Samler', email || 'test@test.dk', phone || '12345678', address || 'Testvej 1', postal || '1000', city || 'København', qty || 1, tier || 'bulk', shippingMethod || 'postnord', totalDkk]
+        );
+
+        res.json({ success: true, url: `/success.html?order=${orderId}` });
+    } catch (err) {
+        res.status(500).json({ error: 'Kunne ikke oprette testordre: ' + err.message });
+    }
+});
+
 app.post('/api/membership-checkout', async (req, res) => {
     try {
         if (!req.session.userId) return res.status(401).json({ error: 'Du skal være logget ind.' });
