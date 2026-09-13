@@ -37,6 +37,7 @@ async function initDb() {
                 password_hash VARCHAR(255),
                 membership_active BOOLEAN DEFAULT false,
                 membership_plan VARCHAR(50),
+                points INT DEFAULT 1000,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -90,6 +91,7 @@ async function initDb() {
             ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
             ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_active BOOLEAN DEFAULT false;
             ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_plan VARCHAR(50);
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS points INT DEFAULT 1000;
         `).catch(() => {});
 
         await pool.query(`
@@ -139,7 +141,7 @@ app.post('/api/admin/login', (req, res) => {
 // ADMIN: HENT ALLE BRUGERE
 app.get('/api/admin/users', checkAdmin, async (req, res) => {
     try {
-        const result = await pool.query('SELECT id, name, email, phone, membership_active, membership_plan, created_at FROM users ORDER BY created_at DESC');
+        const result = await pool.query('SELECT id, name, email, phone, membership_active, membership_plan, points, created_at FROM users ORDER BY created_at DESC');
         res.json({ users: result.rows });
     } catch (e) {
         res.status(500).json({ error: 'Kunne ikke hente brugere' });
@@ -206,24 +208,16 @@ async function sendWelcomeEmail({ name, email }) {
                         <div style="max-width: 600px; margin: 0 auto; background: #111318; color: #fff; padding: 40px; border-radius: 12px; border: 1px solid #222;">
                             <h1 style="color: #e63946; margin-top: 0; text-align: center;">Velkommen til The Poke Bros! 🚀</h1>
                             <p>Hej <b>${name || 'samler'}</b>,</p>
-                            <p>Mange tak for din oprettelse af en konto hos <b>The Poke Bros</b>! Vi er utrolig glade for at byde dig velkommen til vores univers af Pokémon- og One Piece-samlekort.</p>
+                            <p>Mange tak for din oprettelse af en konto hos <b>The Poke Bros</b>! Som velkomstbonus har vi indsat <b>1.000 PokeCoins</b> på din konto.</p>
                             
                             <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
                             
                             <h3 style="color: #2ec4b6;">Hvad kan du på platformen?</h3>
                             <ul style="line-height: 1.6; color: #ccc;">
                                 <li><b>Nem CGC Gradering:</b> Få graded dine kort hos CGC uden at skulle samle en stor submission selv. Vi sender fra bare 1 kort!</li>
-                                <li><b>Eksklusive medlemsfordele:</b> Som medlem får du særlige rabatter på dine submissions og eksklusive fordele i shoppen. Brug koden <code style="background: #222; padding: 2px 6px; color: #ff4d5a;">MASTER2026</code> for 10% rabat på din første ordre.</li>
+                                <li><b>Optjen PokeCoins:</b> Du optjener 1 PokeCoin for hver krone du bruger, som kan bruges til rabat.</li>
                                 <li><b>Sporing af ordrer:</b> Følg dine kort hele vejen fra modtagelse, til de er sendt til CGC, under gradering, og når de er på vej retur til dig.</li>
-                                <li><b>Sælg din samling:</b> Har du kort, du vil af med? Brug vores "Sælg din samling"-formular, så tager vi en uforpligtende snak.</li>
                             </ul>
-
-                            <h3 style="color: #2ec4b6; margin-top: 25px;">Sådan kommer du i gang:</h3>
-                            <ol style="line-height: 1.6; color: #ccc;">
-                                <li>Log ind på din <a href="https://www.thepokebros.com/account.html" style="color: #e63946;">Min Konto</a>-side.</li>
-                                <li>Vælg din ønskede grading-tier og opret din ordre.</li>
-                                <li>Udskriv din pakkeseddel og send dine kort forsvarligt til os.</li>
-                            </ol>
 
                             <p style="margin-top: 30px;">Har du spørgsmål undervejs, er du altid velkommen til at svare direkte på denne e-mail.</p>
                             
@@ -308,7 +302,7 @@ app.post('/api/auth/register', async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const result = await pool.query(
-            'INSERT INTO users (name, email, phone, password_hash) VALUES ($1, $2, $3, $4) RETURNING id, name, email, phone, membership_active, membership_plan',
+            'INSERT INTO users (name, email, phone, password_hash, points) VALUES ($1, $2, $3, $4, 1000) RETURNING id, name, email, phone, membership_active, membership_plan, points',
             [name || '', email, phone || '', hashedPassword]
         );
 
@@ -347,7 +341,7 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/api/auth/me', async (req, res) => {
     if (!req.session.userId) return res.json({ loggedIn: false });
     try {
-        const result = await pool.query('SELECT id, name, email, phone, membership_active, membership_plan FROM users WHERE id = $1', [req.session.userId]);
+        const result = await pool.query('SELECT id, name, email, phone, membership_active, membership_plan, points FROM users WHERE id = $1', [req.session.userId]);
         if (result.rows.length === 0) {
             req.session.destroy(() => {});
             return res.json({ loggedIn: false });
@@ -361,6 +355,7 @@ app.get('/api/auth/me', async (req, res) => {
                 name: user.name,
                 email: user.email,
                 phone: user.phone,
+                points: user.points || 0,
                 membership: { active: user.membership_active, plan: user.membership_plan }
             }
         });
@@ -378,7 +373,7 @@ app.post('/api/auth/logout', (req, res) => {
 app.get('/api/account', async (req, res) => {
     if (!req.session.userId) return res.status(401).json({ error: 'Ikke logget ind' });
     try {
-        const userRes = await pool.query('SELECT id, name, email, phone, membership_active, membership_plan FROM users WHERE id = $1', [req.session.userId]);
+        const userRes = await pool.query('SELECT id, name, email, phone, membership_active, membership_plan, points FROM users WHERE id = $1', [req.session.userId]);
         if (userRes.rows.length === 0) {
             req.session.destroy(() => {});
             return res.status(401).json({ error: 'Bruger ikke fundet' });
@@ -409,6 +404,7 @@ app.get('/api/account', async (req, res) => {
             user: {
                 name: user.name,
                 email: user.email,
+                points: user.points || 0,
                 membership: {
                     active: user.membership_active,
                     plan: user.membership_plan
@@ -725,7 +721,7 @@ app.delete('/api/admin/products/:id', checkAdmin, async (req, res) => {
     }
 });
 
-// NY RUTE: OPKATÉR BETALING TIL PAID OG SEND KVITTERINGSMAIL NÅR KUNDEN LANDER PÅ SUCCESS
+// NY RUTE: OPDATERER BETALING TIL PAID, TILDELER POKECOINS OG SENDER KVITTERING
 app.post('/api/order-success', async (req, res) => {
     const { orderId } = req.body;
     if (!orderId) return res.status(400).json({ error: 'Ordre ID mangler' });
@@ -738,6 +734,16 @@ app.post('/api/order-success', async (req, res) => {
 
         if (updateRes.rows.length > 0) {
             const order = updateRes.rows[0];
+            
+            // Tildel PokeCoins: 1 PokeCoin pr. 1 DKK brugt
+            if (order.customer_email && order.total_dkk) {
+                const earnedCoins = Math.round(order.total_dkk);
+                await pool.query(
+                    'UPDATE users SET points = COALESCE(points, 0) + $1 WHERE email = $2',
+                    [earnedCoins, order.customer_email]
+                );
+            }
+
             sendOrderReceiptEmail(order);
             return res.json({ success: true });
         } else {
