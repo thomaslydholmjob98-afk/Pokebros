@@ -213,15 +213,18 @@ app.delete('/api/admin/users/:id', checkAdmin, async (req, res) => {
     }
 });
 
-// FÆLLES HJÆLPEFUNKTION TIL SØGNING / TRACKING AF ORDRE
+// ROBUST SØGEFUNKTION TIL ORDRE (CASE-INSENSITIV OG DELVISE MATCHES)
 async function handleOrderLookup(orderId, res) {
     if (!orderId) {
         return res.status(400).json({ error: 'Ordre ID mangler.' });
     }
 
     try {
-        const cleanOrderId = orderId.trim();
-        const orderRes = await pool.query('SELECT * FROM orders WHERE order_id = $1', [cleanOrderId]);
+        const cleanOrderId = orderId.toString().trim();
+        const orderRes = await pool.query(
+            'SELECT * FROM orders WHERE order_id ILIKE $1 OR order_id ILIKE $2',
+            [cleanOrderId, `%${cleanOrderId}%`]
+        );
         
         if (orderRes.rows.length === 0) {
             return res.status(404).json({ error: 'Ordren blev ikke fundet i systemet.' });
@@ -275,7 +278,7 @@ app.all('/api/orders/lookup/:orderId', handleTrackingRequest);
 app.get('/api/track-public/:orderId', async (req, res) => {
     const { orderId } = req.params;
     try {
-        const orderRes = await pool.query('SELECT * FROM orders WHERE order_id = $1', [orderId]);
+        const orderRes = await pool.query('SELECT * FROM orders WHERE order_id ILIKE $1', [orderId.trim()]);
         if (orderRes.rows.length === 0) {
             return res.status(404).json({ error: 'Ordren blev ikke fundet.' });
         }
@@ -1019,32 +1022,25 @@ app.post('/api/checkout', async (req, res) => {
 app.post('/api/membership-checkout', async (req, res) => {
     try {
         if (!req.session.userId) return res.status(401).json({ error: 'Du skal være logget ind.' });
-        app.post('/api/membership-checkout', async (req, res) => {
-            try {
-                if (!req.session.userId) return res.status(401).json({ error: 'Du skal være logget ind.' });
-                const { plan } = req.body;
-                const priceDkk = plan === 'yearly' ? 599 : 59;
-        
-                const sessionStripe = await stripe.checkout.sessions.create({
-                    payment_method_types: ['card'],
-                    line_items: [{
-                        price_data: {
-                            currency: 'dkk',
-                            product_data: { name: `Poke Bro Medlemskab (${plan === 'yearly' ? 'Årligt' : 'Månedligt'})` },
-                            unit_amount: priceDkk * 100,
-                        },
-                        quantity: 1,
-                    }],
-                    mode: 'payment',
-                    success_url: `${req.protocol}://${req.get('host')}/account.html?membership=success`,
-                    cancel_url: `${req.protocol}://${req.get('host')}/index.html#membership`,
-                });
-        
-                res.json({ url: sessionStripe.url });
-            } catch (err) {
-                res.status(500).json({ error: 'Kunne ikke starte medlemskab.' });
-            }
+        const { plan } = req.body;
+        const priceDkk = plan === 'yearly' ? 599 : 59;
+
+        const sessionStripe = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: [{
+                price_data: {
+                    currency: 'dkk',
+                    product_data: { name: `Poke Bro Medlemskab (${plan === 'yearly' ? 'Årligt' : 'Månedligt'})` },
+                    unit_amount: priceDkk * 100,
+                },
+                quantity: 1,
+            }],
+            mode: 'payment',
+            success_url: `${req.protocol}://${req.get('host')}/account.html?membership=success`,
+            cancel_url: `${req.protocol}://${req.get('host')}/index.html#membership`,
         });
+
+        res.json({ url: sessionStripe.url });
     } catch (err) {
         res.status(500).json({ error: 'Kunne ikke starte medlemskab.' });
     }
