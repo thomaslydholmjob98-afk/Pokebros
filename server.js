@@ -316,10 +316,13 @@ async function sendWelcomeEmail({ name, email }) {
 // BREVO: FUNKTION TIL AT SENDE ORDREKVITTERING VED BETALING
 async function sendOrderReceiptEmail(order) {
     const brevoApiKey = process.env.BREVO_API_KEY;
-    if (!brevoApiKey || !order.customer_email) return;
+    if (!brevoApiKey || !order.customer_email) {
+        console.log('Brevo mangler nøgle eller kunde-email til kvittering.');
+        return;
+    }
 
     try {
-        await fetch('https://api.brevo.com/v3/smtp/email', {
+        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
             method: 'POST',
             headers: {
                 'accept': 'application/json',
@@ -363,6 +366,13 @@ async function sendOrderReceiptEmail(order) {
                 `
             })
         });
+
+        const data = await response.json();
+        if (!response.ok) {
+            console.error('Brevo fejl ved kvitteringsmail:', JSON.stringify(data));
+        } else {
+            console.log('Kvitteringsmail sendt succesfuldt til:', order.customer_email);
+        }
     } catch (err) {
         console.error('Kunne ikke sende kvitteringsmail via Brevo:', err.message);
     }
@@ -854,10 +864,8 @@ app.delete('/api/admin/products/:id', checkAdmin, async (req, res) => {
     }
 });
 
-app.post('/api/order-success', async (req, res) => {
-    const { orderId } = req.body;
-    if (!orderId) return res.status(400).json({ error: 'Ordre ID mangler' });
-
+// FÆLLES FUNKTION TIL AT MARKERE ORDRE SOM BETALT, GIVE POKECOINS OG SENDE KVITTERING
+async function finalizeOrderAsPaid(orderId) {
     try {
         const updateRes = await pool.query(
             "UPDATE orders SET payment_status = 'paid' WHERE order_id = $1 RETURNING *",
@@ -872,17 +880,27 @@ app.post('/api/order-success', async (req, res) => {
                 await pool.query(
                     'UPDATE users SET points = COALESCE(points, 0) + $1 WHERE email = $2',
                     [earnedCoins, order.customer_email]
-                );
+                ).catch(() => {});
             }
 
             sendOrderReceiptEmail(order);
-            return res.json({ success: true });
-        } else {
-            return res.status(404).json({ error: 'Ordre ikke fundet' });
+            return true;
         }
     } catch (err) {
-        console.error('Fejl ved opdatering af betalingsstatus:', err);
-        res.status(500).json({ error: 'Kunne ikke opdatere ordre' });
+        console.error('Fejl ved finalisering af ordre:', err);
+    }
+    return false;
+}
+
+app.post('/api/order-success', async (req, res) => {
+    const { orderId } = req.body;
+    if (!orderId) return res.status(400).json({ error: 'Ordre ID mangler' });
+
+    const success = await finalizeOrderAsPaid(orderId);
+    if (success) {
+        res.json({ success: true });
+    } else {
+        res.status(404).json({ error: 'Ordre ikke fundet' });
     }
 });
 
@@ -911,13 +929,17 @@ app.post('/api/checkout', async (req, res) => {
 
         const orderId = 'TPB-' + Math.floor(100000 + Math.random() * 900000);
 
-        // Hvis STRIPE_SECRET_KEY mangler, opretter vi ordren direkte som 'paid' til testbrug
+        // Gem altid ordren i databasen først som 'pending' (eller 'paid' i testtilstand)
         if (!process.env.STRIPE_SECRET_KEY) {
             await pool.query(
                 `INSERT INTO orders (order_id, customer_name, customer_email, customer_phone, customer_address, customer_postal, customer_city, qty, tier, shipping_method, total_dkk, payment_status, status)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'paid', 'modtaget')`,
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', 'modtaget')`,
                 [orderId, name || 'Test Samler', email || 'test@test.dk', phone || '12345678', address || 'Testvej 1', postal || '1000', city || 'København', qty || 1, tier || 'bulk', shippingMethod || 'postnord', totalDkk]
             );
+            
+            // Når Stripe nøglen mangler (test), kalder vi med det samme vores fælles funktion, så mailen sendes og coins indsættes
+            await finalizeOrderAsPaid(orderId);
+
             return res.json({ url: `/success.html?order=${orderId}` });
         }
 
@@ -955,7 +977,6 @@ app.post('/api/membership-checkout', async (req, res) => {
         const { plan } = req.body;
         const priceDkk = plan === 'yearly' ? 599 : 59;
 
-        // Hvis STRIPE_SECRET_KEY mangler under test
         if (!process.env.STRIPE_SECRET_KEY) {
             return res.json({ url: `/account.html?membership=success` });
         }
