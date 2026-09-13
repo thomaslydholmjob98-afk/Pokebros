@@ -29,7 +29,6 @@
         .upload-field:hover { border-color: #e63946; }
         .upload-preview { max-height: 140px; border-radius: 6px; margin-top: 10px; display: none; margin-left: auto; margin-right: auto; }
         
-        /* Ekstra sikkerhed til sletteknap for at sikre klikbarhed */
         .force-delete-btn {
             background-color: #ff4d5a !important;
             color: #fff !important;
@@ -85,15 +84,19 @@
             </div>
         </div>
 
-        <!-- SEKTION: BRUGER- OG MEDLEMSKABSHÅNDTERING -->
+        <!-- SEKTION: BRUGER- OG MEDLEMSKABSHÅNDTERING & POKECOINS -->
         <div class="admin-card">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
                 <div>
-                    <h2 style="margin: 0;">Registrerede Brugerkonti & Medlemskaber</h2>
-                    <p style="color: #aaa; font-size: 14px; margin: 4px 0 0 0;">Administrer brugere, tildel gratis VIP-medlemskaber til venner, opdatér eller slet konti.</p>
+                    <h2 style="margin: 0;">Registrerede Brugerkonti, Medlemskaber & PokeCoins</h2>
+                    <p style="color: #aaa; font-size: 14px; margin: 4px 0 0 0;">Søg blandt brugere, administrer medlemskaber og tilpas PokeCoins-saldi.</p>
                 </div>
                 <button onclick="loadAdminUsers()" class="btn small" style="background: #3a86ff; padding: 8px 14px; color: #fff; cursor: pointer;">🔄 Opdatér liste</button>
             </div>
+
+            <!-- Søgefelt til brugere -->
+            <input type="text" id="userSearchInput" placeholder="🔍 Søg efter bruger (navn, e-mail, telefon)..." oninput="searchUsers(this.value)" style="width: 100%; padding: 12px 16px; background: #1a1e29; border: 1px solid #333; color: #fff; border-radius: 8px; font-size: 15px; margin-bottom: 20px; box-sizing: border-box;">
+
             <div style="overflow-x: auto;">
                 <table>
                     <thead>
@@ -101,12 +104,13 @@
                             <th>Navn & E-mail</th>
                             <th>Telefon</th>
                             <th>Medlemskab Type & Status</th>
+                            <th>PokeCoins 🪙</th>
                             <th>Oprettet</th>
                             <th>Handlinger</th>
                         </tr>
                     </thead>
                     <tbody id="adminUsersTableBody">
-                        <tr><td colspan="5" style="text-align: center; color: #888;">Henter brugere...</td></tr>
+                        <tr><td colspan="6" style="text-align: center; color: #888;">Henter brugere...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -235,6 +239,7 @@
     <script>
         let adminPass = localStorage.getItem('tpb_admin_pass') || '';
         let productBase64Image = '';
+        let allUsers = []; // Gemmer alle brugere til søgning
 
         if (adminPass) {
             verifyAndLoadDashboard();
@@ -285,50 +290,95 @@
             location.reload();
         }
 
-        // BRUGER- OG MEDLEMSKABSHÅNDTERING
+        // BRUGER-, MEDLEMSKABS- OG POKECOINS HÅNDTERING
         async function loadAdminUsers() {
             const tbody = document.getElementById('adminUsersTableBody');
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888;">Henter brugere...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #888;">Henter brugere...</td></tr>';
             try {
                 const res = await fetch('/api/admin/users', { headers: { 'x-admin-password': adminPass } });
                 if (!res.ok) throw new Error('Kunne ikke hente brugere');
                 const data = await res.json();
-
-                if (!data.users || data.users.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888;">Ingen registrerede brugere endnu.</td></tr>';
-                    return;
-                }
-
-                tbody.innerHTML = data.users.map(u => `
-                    <tr>
-                        <td><b>${u.name || 'Uden navn'}</b><br><span style="color: #aaa; font-size: 13px;">${u.email}</span></td>
-                        <td>${u.phone || '-'}</td>
-                        <td>
-                            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                                <select id="plan-${u.id}" style="background: #1a1e29; color: #fff; border: 1px solid #333; padding: 5px; border-radius: 4px; font-size: 13px;">
-                                    <option value="monthly" ${u.membership_plan === 'monthly' ? 'selected' : ''}>Månedlig (59 kr.)</option>
-                                    <option value="yearly" ${u.membership_plan === 'yearly' ? 'selected' : ''}>Årlig (599 kr.)</option>
-                                    <option value="free" ${u.membership_plan === 'free' ? 'selected' : ''}>🎁 Gratis VIP Medlem</option>
-                                </select>
-                                <span style="font-size: 12px; padding: 2px 6px; border-radius: 4px; background: ${u.membership_active ? '#2ec4b6' : '#333'}; color: ${u.membership_active ? '#000' : '#aaa'}; font-weight: bold;">
-                                    ${u.membership_active ? (u.membership_plan === 'free' ? 'Gratis VIP' : 'Aktiv') : 'Inaktiv'}
-                                </span>
-                            </div>
-                        </td>
-                        <td style="color: #888; font-size: 13px;">${new Date(u.created_at).toLocaleDateString('da-DK')}</td>
-                        <td>
-                            <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-                                <button type="button" onclick="toggleMembership(${u.id}, ${!u.membership_active})" class="btn small" style="background: ${u.membership_active ? '#ff4d5a' : '#2ec4b6'}; padding: 5px 8px; font-size: 11px; cursor: pointer;">
-                                    ${u.membership_active ? 'Deaktivér' : 'Aktivér'}
-                                </button>
-                                <button type="button" onclick="updateUserPlan(${u.id})" class="btn small" style="background: #3a86ff; padding: 5px 8px; font-size: 11px; color: #fff; cursor: pointer;">Opdatér</button>
-                                <button type="button" onclick="try { if(confirm('Vil du slette bruger ${u.email}?')) { fetch('/api/admin/users/${u.id}', { method: 'DELETE', headers: { 'x-admin-password': '${adminPass}' } }).then(r => r.json()).then(d => { alert('Bruger slettet!'); loadAdminUsers(); loadDashboardData(); }).catch(e => alert('Fejl: ' + e)); } } catch(err) { alert(err); }" class="force-delete-btn">Slet</button>
-                            </div>
-                        </td>
-                    </tr>
-                `).join('');
+                allUsers = data.users || [];
+                renderUsers(allUsers);
             } catch (e) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ff4d5a;">Fejl ved hentning af brugere.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #ff4d5a;">Fejl ved hentning af brugere.</td></tr>';
+            }
+        }
+
+        function renderUsers(users) {
+            const tbody = document.getElementById('adminUsersTableBody');
+            if (!users || users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #888;">Ingen brugere fundet.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td><b>${u.name || 'Uden navn'}</b><br><span style="color: #aaa; font-size: 13px;">${u.email}</span></td>
+                    <td>${u.phone || '-'}</td>
+                    <td>
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                            <select id="plan-${u.id}" style="background: #1a1e29; color: #fff; border: 1px solid #333; padding: 5px; border-radius: 4px; font-size: 13px;">
+                                <option value="monthly" ${u.membership_plan === 'monthly' ? 'selected' : ''}>Månedlig (59 kr.)</option>
+                                <option value="yearly" ${u.membership_plan === 'yearly' ? 'selected' : ''}>Årlig (599 kr.)</option>
+                                <option value="free" ${u.membership_plan === 'free' ? 'selected' : ''}>🎁 Gratis VIP Medlem</option>
+                            </select>
+                            <span style="font-size: 12px; padding: 2px 6px; border-radius: 4px; background: ${u.membership_active ? '#2ec4b6' : '#333'}; color: ${u.membership_active ? '#000' : '#aaa'}; font-weight: bold;">
+                                ${u.membership_active ? (u.membership_plan === 'free' ? 'Gratis VIP' : 'Aktiv') : 'Inaktiv'}
+                            </span>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <input type="number" id="points-${u.id}" value="${u.points || 0}" style="width: 75px; background: #1a1e29; color: #ffb703; border: 1px solid #444; padding: 5px; border-radius: 4px; font-weight: bold; text-align: center;">
+                            <button type="button" onclick="updateUserPoints(${u.id})" class="btn small" style="background: #ffb703; color: #111; padding: 5px 8px; font-size: 11px; font-weight: bold; cursor: pointer;">Gem</button>
+                        </div>
+                    </td>
+                    <td style="color: #888; font-size: 13px;">${new Date(u.created_at).toLocaleDateString('da-DK')}</td>
+                    <td>
+                        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                            <button type="button" onclick="toggleMembership(${u.id}, ${!u.membership_active})" class="btn small" style="background: ${u.membership_active ? '#ff4d5a' : '#2ec4b6'}; padding: 5px 8px; font-size: 11px; cursor: pointer;">
+                                ${u.membership_active ? 'Deaktivér' : 'Aktivér'}
+                            </button>
+                            <button type="button" onclick="updateUserPlan(${u.id})" class="btn small" style="background: #3a86ff; padding: 5px 8px; font-size: 11px; color: #fff; cursor: pointer;">Opdatér</button>
+                            <button type="button" onclick="try { if(confirm('Vil du slette bruger ${u.email}?')) { fetch('/api/admin/users/${u.id}', { method: 'DELETE', headers: { 'x-admin-password': '${adminPass}' } }).then(r => r.json()).then(d => { alert('Bruger slettet!'); loadAdminUsers(); loadDashboardData(); }).catch(e => alert('Fejl: ' + e)); } } catch(err) { alert(err); }" class="force-delete-btn">Slet</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Søgefunktion til brugere
+        function searchUsers(query) {
+            const q = query.toLowerCase();
+            const filtered = allUsers.filter(u => 
+                (u.name && u.name.toLowerCase().includes(q)) || 
+                (u.email && u.email.toLowerCase().includes(q)) ||
+                (u.phone && u.phone.includes(q))
+            );
+            renderUsers(filtered);
+        }
+
+        // Opdatér PokeCoins for en bruger
+        async function updateUserPoints(userId) {
+            const pointsInput = document.getElementById(`points-${userId}`);
+            const pointsVal = pointsInput ? pointsInput.value : 0;
+
+            try {
+                const res = await fetch(`/api/admin/users/${userId}/points`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-password': adminPass
+                    },
+                    body: JSON.stringify({ points: pointsVal })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Kunne ikke opdatere PokeCoins');
+                alert('PokeCoins opdateret succesfuldt! 🪙');
+                loadAdminUsers();
+            } catch (err) {
+                alert('Fejl: ' + err.message);
             }
         }
 
