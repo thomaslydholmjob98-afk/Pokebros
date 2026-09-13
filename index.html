@@ -72,6 +72,41 @@
             color: #ffb703;
             font-weight: bold;
         }
+
+        /* MOBILVENLIG NAVIGATION FIX (Gør at man kan scrolle menupunkterne vandret på telefoner) */
+        @media (max-width: 900px) {
+            header {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 12px 15px;
+                gap: 10px;
+            }
+            header nav {
+                display: flex;
+                overflow-x: auto;
+                white-space: nowrap;
+                gap: 15px;
+                padding-bottom: 6px;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none; /* Skjul scrollbar i Firefox */
+            }
+            header nav::-webkit-scrollbar {
+                display: none; /* Skjul scrollbar i Chrome/Safari */
+            }
+            header nav a {
+                flex-shrink: 0;
+                font-size: 13px;
+                padding: 4px 8px;
+                background: #1a1e29;
+                border-radius: 4px;
+                border: 1px solid #333;
+            }
+            #headerAuthContainer {
+                display: flex;
+                justify-content: center;
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
