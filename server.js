@@ -213,15 +213,16 @@ app.delete('/api/admin/users/:id', checkAdmin, async (req, res) => {
     }
 });
 
-// OFFENTLIG SØGNING / TRACKING AF ORDRE VIA API
-app.get('/api/orders/lookup/:orderId', async (req, res) => {
-    const { orderId } = req.params;
+// FÆLLES HJÆLPEFUNKTION TIL SØGNING / TRACKING AF ORDRE
+async function handleOrderLookup(orderId, res) {
     if (!orderId) {
         return res.status(400).json({ error: 'Ordre ID mangler.' });
     }
 
     try {
-        const orderRes = await pool.query('SELECT * FROM orders WHERE order_id = $1', [orderId]);
+        const cleanOrderId = orderId.trim();
+        const orderRes = await pool.query('SELECT * FROM orders WHERE order_id = $1', [cleanOrderId]);
+        
         if (orderRes.rows.length === 0) {
             return res.status(404).json({ error: 'Ordren blev ikke fundet i systemet.' });
         }
@@ -236,7 +237,7 @@ app.get('/api/orders/lookup/:orderId', async (req, res) => {
             'retur': 'Pakket & Retur til Kunde'
         };
 
-        res.json({
+        return res.json({
             success: true,
             order: {
                 orderId: o.order_id,
@@ -256,8 +257,25 @@ app.get('/api/orders/lookup/:orderId', async (req, res) => {
         });
     } catch (err) {
         console.error('Ordre lookup fejl:', err);
-        res.status(500).json({ error: 'Der opstod en databasefejl ved søgning.' });
+        return res.status(500).json({ error: 'Der opstod en databasefejl ved søgning.' });
     }
+}
+
+// ALLE TÆNKELIGE SØGE- / TRACKING-RUTER SÅ FRONTEND ALDRIG FÅR HTML-FEJL
+app.get('/api/orders/lookup/:orderId', async (req, res) => {
+    return handleOrderLookup(req.params.orderId, res);
+});
+
+app.get('/api/track/:orderId', async (req, res) => {
+    return handleOrderLookup(req.params.orderId, res);
+});
+
+app.get('/api/order/:orderId', async (req, res) => {
+    return handleOrderLookup(req.params.orderId, res);
+});
+
+app.get('/api/orders/:orderId', async (req, res) => {
+    return handleOrderLookup(req.params.orderId, res);
 });
 
 // OFFENTLIG ORDREHENTNING TIL PAKKESEDDEL
