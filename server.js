@@ -214,12 +214,15 @@ app.delete('/api/admin/users/:id', checkAdmin, async (req, res) => {
 // BREVO: FUNKTION TIL AT SENDE VELKOMSTMAIL
 async function sendWelcomeEmail({ name, email }) {
     const brevoApiKey = process.env.BREVO_API_KEY;
-    if (!brevoApiKey) return;
+    if (!brevoApiKey) {
+        console.error('BREVO_API_KEY mangler i miljøvariablerne!');
+        return;
+    }
 
     const senderEmail = 'kontakt@thepokebros.com';
 
     try {
-        await fetch('https://api.brevo.com/v3/smtp/email', {
+        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
             method: 'POST',
             headers: {
                 'accept': 'application/json',
@@ -258,6 +261,13 @@ async function sendWelcomeEmail({ name, email }) {
                 `
             })
         });
+
+        const data = await response.json();
+        if (!response.ok) {
+            console.error('Brevo fejl ved velkomstmail:', JSON.stringify(data));
+        } else {
+            console.log('Velkomstmail sendt succesfuldt til:', email);
+        }
     } catch (err) {
         console.error('Kunne ikke sende velkomstmail via Brevo:', err.message);
     }
