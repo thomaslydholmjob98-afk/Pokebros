@@ -261,7 +261,13 @@ async function handleOrderLookup(orderId, res) {
     }
 }
 
-// ALLE TÆNKELIGE SØGE- / TRACKING-RUTER SÅ FRONTEND ALDRIG FÅR HTML-FEJL
+// UNIVERSAL CATCH-ALL FOR FORESPØRGSLER MED QUERY-PARAMETRE (f.eks. /api/orders?orderId=...)
+app.get(['/api/orders', '/api/track', '/api/order'], async (req, res) => {
+    const orderId = req.query.orderId || req.query.id || req.query.q;
+    return handleOrderLookup(orderId, res);
+});
+
+// ALLE TÆNKELIGE URL-PARAMETRE RUTER
 app.get('/api/orders/lookup/:orderId', async (req, res) => {
     return handleOrderLookup(req.params.orderId, res);
 });
