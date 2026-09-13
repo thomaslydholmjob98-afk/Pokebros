@@ -231,6 +231,7 @@ async function handleOrderLookup(orderId, res) {
         }
         
         const o = orderRes.rows[0];
+        const tierStr = (o.tier || 'standard').toUpperCase();
         
         const statusLabels = {
             'modtaget': 'Ordre Modtaget',
@@ -246,7 +247,7 @@ async function handleOrderLookup(orderId, res) {
                 orderId: o.order_id,
                 createdAt: o.created_at,
                 qty: o.qty,
-                tier: o.tier,
+                tier: tierStr,
                 totalDkk: o.total_dkk,
                 status: o.status,
                 statusLabel: statusLabels[o.status] || o.status,
@@ -283,6 +284,7 @@ app.get('/api/track-public/:orderId', async (req, res) => {
             return res.status(404).json({ error: 'Ordren blev ikke fundet.' });
         }
         const o = orderRes.rows[0];
+        const tierStr = (o.tier || 'standard').toUpperCase();
         
         const statusLabels = {
             'modtaget': 'Ordre Modtaget',
@@ -296,7 +298,7 @@ app.get('/api/track-public/:orderId', async (req, res) => {
             orderId: o.order_id,
             createdAt: o.created_at,
             qty: o.qty,
-            tier: o.tier,
+            tier: tierStr,
             totalDkk: o.total_dkk,
             status: o.status,
             statusLabel: statusLabels[o.status] || o.status,
@@ -382,6 +384,8 @@ async function sendOrderReceiptEmail(order) {
         return;
     }
 
+    const tierStr = (order.tier || 'standard').toUpperCase();
+
     try {
         const response = await fetch('https://api.brevo.com/v3/smtp/email', {
             method: 'POST',
@@ -404,11 +408,11 @@ async function sendOrderReceiptEmail(order) {
                             <div style="background: #1a1e29; padding: 20px; border-radius: 8px; border: 1px solid #333; margin: 25px 0;">
                                 <h3 style="margin-top: 0; color: #e63946; font-size: 16px;">Ordredetaljer</h3>
                                 <p style="margin: 5px 0;"><b>Ordre ID:</b> ${order.order_id}</p>
-                                <p style="margin: 5px 0;"><b>Service / Tier:</b> ${order.tier.toUpperCase()}</p>
-                                <p style="margin: 5px 0;"><b>Antal kort:</b> ${order.qty} stk.</p>
-                                <p style="margin: 5px 0;"><b>Returfragt:</b> ${order.shipping_method}</p>
+                                <p style="margin: 5px 0;"><b>Service / Tier:</b> ${tierStr}</p>
+                                <p style="margin: 5px 0;"><b>Antal kort:</b> ${order.qty || 1} stk.</p>
+                                <p style="margin: 5px 0;"><b>Returfragt:</b> ${order.shipping_method || '-'}</p>
                                 <hr style="border: 0; border-top: 1px solid #444; margin: 15px 0;">
-                                <p style="margin: 5px 0; font-size: 16px;"><b>Samlet pris:</b> <span style="color: #2ec4b6;">${order.total_dkk} kr.</span></p>
+                                <p style="margin: 5px 0; font-size: 16px;"><b>Samlet pris:</b> <span style="color: #2ec4b6;">${order.total_dkk || 0} kr.</span></p>
                             </div>
 
                             <h3 style="color: #2ec4b6; font-size: 16px;">Hvad sker der nu?</h3>
@@ -542,7 +546,7 @@ app.get('/api/account', async (req, res) => {
             orderId: o.order_id,
             createdAt: o.created_at,
             qty: o.qty,
-            tier: o.tier,
+            tier: (o.tier || 'standard').toUpperCase(),
             totalDkk: o.total_dkk,
             statusLabel: statusLabels[o.status] || o.status,
             trackingNumber: o.tracking_number
@@ -827,6 +831,7 @@ app.patch('/api/admin/orders/:id', checkAdmin, async (req, res) => {
         if (orderRes.rows.length > 0) {
             const order = orderRes.rows[0];
             const brevoApiKey = process.env.BREVO_API_KEY;
+            const tierStr = (order.tier || 'standard').toUpperCase();
 
             if (brevoApiKey && order.customer_email) {
                 const currentStatusLabel = statusLabels[order.status] || order.status;
@@ -850,7 +855,7 @@ app.patch('/api/admin/orders/:id', checkAdmin, async (req, res) => {
                                 <div style="max-width: 600px; margin: 0 auto; background: #111318; color: #fff; padding: 40px; border-radius: 12px; border: 1px solid #222;">
                                     <h2 style="color: #e63946; margin-top: 0; text-align: center;">Ordreopdatering 🚀</h2>
                                     <p>Hej <b>${order.customer_name || 'Samler'}</b>,</p>
-                                    <p>Der er nyt omkring din CGC-indsendelse for ordre <b>${order.order_id}</b> (${order.qty} stk. ${order.tier.toUpperCase()}).</p>
+                                    <p>Der er nyt omkring din CGC-indsendelse for ordre <b>${order.order_id}</b> (${order.qty || 1} stk. ${tierStr}).</p>
                                     
                                     <div style="background: #1a1e29; padding: 20px; border-radius: 8px; border: 1px solid #e63946; margin: 25px 0; text-align: center;">
                                         <span style="font-size: 12px; color: #aaa; text-transform: uppercase; display: block; margin-bottom: 5px;">Nuværende status</span>
@@ -989,6 +994,8 @@ app.post('/api/checkout', async (req, res) => {
         }
 
         const orderId = 'TPB-' + Math.floor(100000 + Math.random() * 900000);
+        const tierStr = (tier || 'standard').toUpperCase();
+        const quantity = qty || 1;
 
         // Opret altid en rigtig Stripe Checkout Session
         const sessionStripe = await stripe.checkout.sessions.create({
@@ -996,10 +1003,10 @@ app.post('/api/checkout', async (req, res) => {
             line_items: [{
                 price_data: {
                     currency: 'dkk',
-                    product_data: { name: `CGC Grading (${tier.toUpperCase()}) - ${qty} stk.` },
-                    unit_amount: Math.round((totalDkk / qty) * 100),
+                    product_data: { name: `CGC Grading (${tierStr}) - ${quantity} stk.` },
+                    unit_amount: Math.round((totalDkk / quantity) * 100),
                 },
-                quantity: qty,
+                quantity: quantity,
             }],
             mode: 'payment',
             success_url: `${req.protocol}://${req.get('host')}/success.html?order=${orderId}`,
@@ -1009,7 +1016,7 @@ app.post('/api/checkout', async (req, res) => {
         await pool.query(
             `INSERT INTO orders (order_id, customer_name, customer_email, customer_phone, customer_address, customer_postal, customer_city, qty, tier, shipping_method, total_dkk, payment_status, status)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'pending', 'modtaget')`,
-            [orderId, name, email, phone, address, postal, city, qty, tier, shippingMethod, totalDkk]
+            [orderId, name, email, phone, address, postal, city, quantity, tier || 'standard', shippingMethod, totalDkk]
         );
 
         res.json({ url: sessionStripe.url });
