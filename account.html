@@ -39,7 +39,26 @@
                 </div>
                 <button class="logout-btn" onclick="logout()">Log ud</button>
             </div>
-            <div id="membershipStatus" style="margin-top: 20px; padding: 15px; background: #1a1e29; border-radius: 8px; border: 1px solid #333;">
+
+            <!-- POKECOINS SALDO BOX MED IKON -->
+            <div style="background: linear-gradient(135deg, #1a1e29 0%, #111318 100%); border: 2px solid #ffb703; border-radius: 12px; padding: 20px; margin: 25px 0 20px 0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <!-- Mønt-ikon med P i -->
+                    <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #ffb703 0%, #f77f00 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(255,183,3,0.3); border: 2px solid #fff;">
+                        <span style="color: #111; font-weight: 900; font-size: 22px; font-family: Arial, sans-serif;">P</span>
+                    </div>
+                    <div>
+                        <h3 style="color: #ffb703; margin: 0 0 3px 0; font-size: 18px;">Dine PokeCoins</h3>
+                        <p style="color: #ccc; margin: 0; font-size: 13px;">1 krone brugt = 1 PokeCoin. 100 Coins = 1 kr. i rabat!</p>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <span id="userPointsDisplay" style="font-size: 24px; font-weight: bold; color: #ffb703; display: block;">0 Coins</span>
+                    <span id="userPointsDkk" style="font-size: 13px; color: #aaa;">Svarer til 0.00 kr. i rabat</span>
+                </div>
+            </div>
+
+            <div id="membershipStatus" style="padding: 15px; background: #1a1e29; border-radius: 8px; border: 1px solid #333;">
                 <b>Medlemskab:</b> <span id="memberDesc">Indlæser medlemsstatus...</span>
             </div>
         </div>
@@ -67,6 +86,12 @@
                 document.getElementById('userName').textContent = data.user.name;
                 document.getElementById('userEmail').textContent = data.user.email;
                 
+                // Opdater PokeCoins og rabat
+                const points = data.user.points || 0;
+                document.getElementById('userPointsDisplay').textContent = points + ' Coins';
+                const dkkValue = (points / 100).toFixed(2);
+                document.getElementById('userPointsDkk').textContent = `Svarer til ${dkkValue} kr. i rabat`;
+
                 const m = data.user.membership;
                 let memberText = 'Ingen aktivt medlemskab. (Tilmeld dig på forsiden for at få rabat på Bulk-grading).';
 
