@@ -84,6 +84,10 @@
             border-radius: 6px;
             cursor: pointer;
         }
+        .mobile-auth-only {
+            display: none;
+        }
+
         @media (max-width: 900px) {
             header {
                 flex-wrap: wrap;
@@ -113,7 +117,11 @@
                 text-align: left;
             }
             #headerAuthContainer {
-                display: none; /* Flyttes eller håndteres via menuen på mobil */
+                display: none; /* Skjuler desktop-login på mobil */
+            }
+            .mobile-auth-only {
+                display: block; /* Viser login/konto kun inde i mobilmenuen */
+                margin-top: 10px;
             }
         }
     </style>
@@ -132,7 +140,7 @@
         <a href="#faq">FAQ</a>
         <a href="track.html">Spor ordre</a>
         <a href="#contact">Kontakt</a>
-        <div id="mobileAuthContainer" style="margin-top: 10px;"></div>
+        <div id="mobileAuthContainer" class="mobile-auth-only"></div>
     </nav>
     <div id="headerAuthContainer">
         <!-- Indlæses automatisk via JavaScript på desktop -->
