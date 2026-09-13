@@ -187,7 +187,7 @@ async function sendWelcomeEmail({ name, email }) {
     const brevoApiKey = process.env.BREVO_API_KEY;
     if (!brevoApiKey) return;
 
-    const senderEmail = 'thomaslydholmjob98@gmail.com'; // Skift evt. til din officielle afsender-e-mail i Brevo
+    const senderEmail = 'thomaslydholmjob98@gmail.com';
 
     try {
         await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -213,7 +213,7 @@ async function sendWelcomeEmail({ name, email }) {
                             <h3 style="color: #2ec4b6;">Hvad kan du på platformen?</h3>
                             <ul style="line-height: 1.6; color: #ccc;">
                                 <li><b>Nem CGC Gradering:</b> Få graded dine kort hos CGC uden at skulle samle en stor submission selv. Vi sender fra bare 1 kort!</li>
-                               <li><b>Eksklusive medlemsfordele:</b> Som medlem får du særlige rabatter på dine submissons og eksklusive fordele i shoppen. Brug koden <code style="background: #222; padding: 2px 6px; color: #ff4d5a;">MASTER2026</code> for 10% rabat på din første ordre.</li>
+                                <li><b>Eksklusive medlemsfordele:</b> Som medlem får du særlige rabatter på dine submissions og eksklusive fordele i shoppen. Brug koden <code style="background: #222; padding: 2px 6px; color: #ff4d5a;">MASTER2026</code> for 10% rabat på din første ordre.</li>
                                 <li><b>Sporing af ordrer:</b> Følg dine kort hele vejen fra modtagelse, til de er sendt til CGC, under gradering, og når de er på vej retur til dig.</li>
                                 <li><b>Sælg din samling:</b> Har du kort, du vil af med? Brug vores "Sælg din samling"-formular, så tager vi en uforpligtende snak.</li>
                             </ul>
@@ -260,7 +260,6 @@ app.post('/api/auth/register', async (req, res) => {
         const user = result.rows[0];
         req.session.userId = user.id;
 
-        // Send den lange velkomstmail via Brevo i baggrunden
         sendWelcomeEmail({ name: user.name, email: user.email });
 
         res.json({ success: true, user });
@@ -542,14 +541,77 @@ app.get('/api/admin/orders', checkAdmin, async (req, res) => {
     }
 });
 
+// ADMIN: OPDATÉR ORDRE OG SEND AUTOMATISK E-MAIL VIA BREVO
 app.patch('/api/admin/orders/:id', checkAdmin, async (req, res) => {
     const { id } = req.params;
     const { status, trackingNumber } = req.body;
+    
+    const statusLabels = {
+        'modtaget': 'Ordre Modtaget',
+        'under_behandling': 'Under Behandling',
+        'sendt_cgc': 'Sendt til CGC (USA)',
+        'hos_cgc': 'Hos CGC til Gradering',
+        'retur': 'Pakket & Retur til Kunde'
+    };
+
     try {
         if (status) await pool.query('UPDATE orders SET status = $1 WHERE order_id = $2', [status, id]);
         if (trackingNumber !== undefined) await pool.query('UPDATE orders SET tracking_number = $1 WHERE order_id = $2', [trackingNumber, id]);
+
+        const orderRes = await pool.query('SELECT customer_name, customer_email, order_id, tier, qty, tracking_number, status FROM orders WHERE order_id = $1', [id]);
+        
+        if (orderRes.rows.length > 0) {
+            const order = orderRes.rows[0];
+            const brevoApiKey = process.env.BREVO_API_KEY;
+
+            if (brevoApiKey && order.customer_email) {
+                const currentStatusLabel = statusLabels[order.status] || order.status;
+                const trackingSection = order.tracking_number 
+                    ? `<p style="background: #1a1e29; padding: 12px; border-radius: 6px; border: 1px solid #333;"><b>Trackingnummer / PostNord:</b> ${order.tracking_number}</p>` 
+                    : '';
+
+                fetch('https://api.brevo.com/v3/smtp/email', {
+                    method: 'POST',
+                    headers: {
+                        'accept': 'application/json',
+                        'api-key': brevoApiKey,
+                        'content-type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sender: { name: 'The Poke Bros', email: 'thomaslydholmjob98@gmail.com' },
+                        to: [{ email: order.customer_email, name: order.customer_name || 'Kunde' }],
+                        subject: `📦 Opdatering på din grading-ordre (${order.order_id})`,
+                        htmlContent: `
+                            <div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; color: #333;">
+                                <div style="max-width: 600px; margin: 0 auto; background: #111318; color: #fff; padding: 40px; border-radius: 12px; border: 1px solid #222;">
+                                    <h2 style="color: #e63946; margin-top: 0; text-align: center;">Ordreopdatering 🚀</h2>
+                                    <p>Hej <b>${order.customer_name || 'Samler'}</b>,</p>
+                                    <p>Der er nyt omkring din CGC-indsendelse for ordre <b>${order.order_id}</b> (${order.qty} stk. ${order.tier.toUpperCase()}).</p>
+                                    
+                                    <div style="background: #1a1e29; padding: 20px; border-radius: 8px; border: 1px solid #e63946; margin: 25px 0; text-align: center;">
+                                        <span style="font-size: 12px; color: #aaa; text-transform: uppercase; display: block; margin-bottom: 5px;">Nuværende status</span>
+                                        <span style="font-size: 20px; color: #2ec4b6; font-weight: bold;">${currentStatusLabel}</span>
+                                    </div>
+
+                                    ${trackingSection}
+
+                                    <p style="margin-top: 25px;">Du kan til enhver tid tjekke den fulde tidslinje og status ved at logge ind på din konto på <a href="https://www.thepokebros.com/account.html" style="color: #e63946;">www.thepokebros.com</a>.</p>
+                                    
+                                    <p style="margin-top: 40px; text-align: center; color: #888; font-size: 13px;">
+                                        De bedste hilsner,<br>
+                                        <b>The Poke Bros Team</b>
+                                    </p>
+                                </div>
+                            </div>
+                        `
+                    })
+                }).catch(err => console.error('Fejl ved afsendelse af status-mail:', err.message));
+            }
+        }
+
         res.json({ success: true });
     } catch (e) {
+        console.error('Ordreopdateringsfejl:', e);
         res.status(500).json({ error: 'Kunne ikke opdatere ordre' });
     }
 });
