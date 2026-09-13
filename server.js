@@ -213,6 +213,44 @@ app.delete('/api/admin/users/:id', checkAdmin, async (req, res) => {
     }
 });
 
+// OFFENTLIG ORDREHENTNING TIL PAKKESEDDEL
+app.get('/api/track-public/:orderId', async (req, res) => {
+    const { orderId } = req.params;
+    try {
+        const orderRes = await pool.query('SELECT * FROM orders WHERE order_id = $1', [orderId]);
+        if (orderRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Ordren blev ikke fundet.' });
+        }
+        const o = orderRes.rows[0];
+        
+        const statusLabels = {
+            'modtaget': 'Ordre Modtaget',
+            'under_behandling': 'Under Behandling',
+            'sendt_cgc': 'Sendt til CGC',
+            'hos_cgc': 'Hos CGC (Gradering)',
+            'retur': 'Pakket & Retur til Kunde'
+        };
+
+        res.json({
+            orderId: o.order_id,
+            createdAt: o.created_at,
+            qty: o.qty,
+            tier: o.tier,
+            totalDkk: o.total_dkk,
+            status: o.status,
+            statusLabel: statusLabels[o.status] || o.status,
+            trackingNumber: o.tracking_number,
+            customer_name: o.customer_name,
+            customer_email: o.customer_email,
+            customer_address: o.customer_address,
+            customer_postal: o.customer_postal,
+            customer_city: o.customer_city
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Databasefejl' });
+    }
+});
+
 // BREVO: FUNKTION TIL AT SENDE VELKOMSTMAIL
 async function sendWelcomeEmail({ name, email }) {
     const brevoApiKey = process.env.BREVO_API_KEY;
@@ -439,7 +477,6 @@ app.get('/api/account', async (req, res) => {
             trackingNumber: o.tracking_number
         }));
 
-        // Tjek om brugeren kan spinne (om der er gået 24 timer siden sidst)
         let canSpin = true;
         let nextSpinIn = null;
         if (user.last_spin_date) {
@@ -491,9 +528,6 @@ app.post('/api/spin-wheel', async (req, res) => {
             }
         }
 
-        // Vælg tilfældige PokeCoins mellem 10 og 100
-        const possiblePrizes = [10, 15, 20, 25, 30, 40, 50, 75, 100];
-        // Vægtning: Gør de lavere præmier mere almindelige, og 100 til en sjælden jackpot
         const weightedPrizes = [10, 10, 10, 15, 15, 20, 20, 25, 30, 40, 50, 75, 100];
         const wonCoins = weightedPrizes[Math.floor(Math.random() * weightedPrizes.length)];
 
