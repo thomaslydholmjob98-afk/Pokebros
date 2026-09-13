@@ -35,6 +35,33 @@
             filter: drop-shadow(0 3px 8px rgba(0,0,0,0.4));
         }
 
+        /* LIVLIG PIKACHU MASKOT I BUNDEN (Hjørne til venstre) */
+        @keyframes pikachuBounce {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(3deg); }
+        }
+        #pikachuContainer {
+            position: fixed; bottom: 20px; left: 20px; z-index: 9998;
+            display: flex; align-items: flex-end; gap: 12px; pointer-events: auto;
+        }
+        #pikachuMaskot {
+            width: 95px; height: 95px; cursor: pointer; object-fit: contain;
+            animation: pikachuBounce 3s ease-in-out infinite;
+            filter: drop-shadow(0 6px 16px rgba(0,0,0,0.6));
+            transition: transform 0.3s;
+        }
+        #pikachuMaskot:hover { transform: scale(1.15) rotate(-6deg); }
+        
+        /* Taleblære til Pikachu */
+        #pikachuSpeech {
+            background: #1a1e29; color: #ffb703; border: 2px solid #e63946;
+            padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: bold;
+            max-width: 230px; box-shadow: 0 6px 20px rgba(0,0,0,0.8);
+            position: relative; bottom: 30px; opacity: 0; transform: translateY(10px);
+            transition: opacity 0.3s ease, transform 0.3s ease; pointer-events: none;
+        }
+        #pikachuSpeech.show { opacity: 1; transform: translateY(0); }
+
         /* Solgt-elementer til produkter på shoppen */
         .product-card { position: relative; }
         .sold-badge {
@@ -403,6 +430,12 @@
     <small>Pokémon og CGC er varemærker tilhørende deres respektive ejere.</small>
 </footer>
 
+<!-- PIKACHU MASKOT I VENSTRE BUND -->
+<div id="pikachuContainer">
+    <div id="pikachuSpeech">Pika-pika! Klik på mig for at få et godt råd! ⚡</div>
+    <img id="pikachuMaskot" src="c948c3b567936aa210cb62b66bf923.webp" alt="Pikachu Maskot" onclick="clickPikachu()" title="Klik på Pikachu!">
+</div>
+
 <!-- Stor, svævende & genert Master Ball (Løftet op i højre hjørne) -->
 <div id="easterEggContainer">
     <div id="pokeEasterEgg" onclick="triggerMasterBallRain()" title="Klik for en overraskelse!">
@@ -430,6 +463,31 @@
 </div>
 
 <script>
+// Pikachu citater og interaktion
+const pikachuQuotes = [
+    "Pika-pika! Husk at tjekke din kort-centering med vores AI Pre-Grade! ⚡",
+    "Chuu! Du kan sende helt ned til 1 enkelt kort hos The Poke Bros!",
+    "Pikachu! Medlemmer sparer 30 kr. pr. kort på vores Bulk-service! 🎯",
+    "Bili-bili! Alle forsendelser til CGC er fuldt forsikrede undervejs!",
+    "Pika! Har du tjekket live-puljen på forsiden? Vi nærmer os 25 kort! 📦"
+];
+
+function clickPikachu() {
+    const speech = document.getElementById('pikachuSpeech');
+    const pikachuImg = document.getElementById('pikachuMaskot');
+    
+    pikachuImg.style.transform = 'scale(1.25) rotate(10deg)';
+    setTimeout(() => { pikachuImg.style.transform = 'scale(1) rotate(0deg)'; }, 300);
+
+    const randomQuote = pikachuQuotes[Math.floor(Math.random() * pikachuQuotes.length)];
+    speech.textContent = randomQuote;
+    speech.classList.add('show');
+    
+    setTimeout(() => {
+        speech.classList.remove('show');
+    }, 4500);
+}
+
 // Funktion til at åbne/lukke mobilmenuen
 function toggleMobileMenu() {
     const nav = document.getElementById('mainNav');
