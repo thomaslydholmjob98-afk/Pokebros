@@ -261,28 +261,15 @@ async function handleOrderLookup(orderId, res) {
     }
 }
 
-// UNIVERSAL CATCH-ALL FOR FORESPØRGSLER MED QUERY-PARAMETRE (f.eks. /api/orders?orderId=...)
-app.get(['/api/orders', '/api/track', '/api/order'], async (req, res) => {
-    const orderId = req.query.orderId || req.query.id || req.query.q;
+// UNIVERSEL HÅNDTERING AF BÅDE GET OG POST FOR ALLE SPORINGSADRESSER
+async function handleTrackingRequest(req, res) {
+    const orderId = req.params.orderId || req.body.orderId || req.query.orderId || req.body.id || req.query.id || req.body.query || req.query.query;
     return handleOrderLookup(orderId, res);
-});
+}
 
-// ALLE TÆNKELIGE URL-PARAMETRE RUTER
-app.get('/api/orders/lookup/:orderId', async (req, res) => {
-    return handleOrderLookup(req.params.orderId, res);
-});
-
-app.get('/api/track/:orderId', async (req, res) => {
-    return handleOrderLookup(req.params.orderId, res);
-});
-
-app.get('/api/order/:orderId', async (req, res) => {
-    return handleOrderLookup(req.params.orderId, res);
-});
-
-app.get('/api/orders/:orderId', async (req, res) => {
-    return handleOrderLookup(req.params.orderId, res);
-});
+app.all(['/api/orders', '/api/track', '/api/order', '/api/trackRequest'], handleTrackingRequest);
+app.all(['/api/orders/:orderId', '/api/track/:orderId', '/api/order/:orderId'], handleTrackingRequest);
+app.all('/api/orders/lookup/:orderId', handleTrackingRequest);
 
 // OFFENTLIG ORDREHENTNING TIL PAKKESEDDEL
 app.get('/api/track-public/:orderId', async (req, res) => {
@@ -1032,25 +1019,32 @@ app.post('/api/checkout', async (req, res) => {
 app.post('/api/membership-checkout', async (req, res) => {
     try {
         if (!req.session.userId) return res.status(401).json({ error: 'Du skal være logget ind.' });
-        const { plan } = req.body;
-        const priceDkk = plan === 'yearly' ? 599 : 59;
-
-        const sessionStripe = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
-            line_items: [{
-                price_data: {
-                    currency: 'dkk',
-                    product_data: { name: `Poke Bro Medlemskab (${plan === 'yearly' ? 'Årligt' : 'Månedligt'})` },
-                    unit_amount: priceDkk * 100,
-                },
-                quantity: 1,
-            }],
-            mode: 'payment',
-            success_url: `${req.protocol}://${req.get('host')}/account.html?membership=success`,
-            cancel_url: `${req.protocol}://${req.get('host')}/index.html#membership`,
+        app.post('/api/membership-checkout', async (req, res) => {
+            try {
+                if (!req.session.userId) return res.status(401).json({ error: 'Du skal være logget ind.' });
+                const { plan } = req.body;
+                const priceDkk = plan === 'yearly' ? 599 : 59;
+        
+                const sessionStripe = await stripe.checkout.sessions.create({
+                    payment_method_types: ['card'],
+                    line_items: [{
+                        price_data: {
+                            currency: 'dkk',
+                            product_data: { name: `Poke Bro Medlemskab (${plan === 'yearly' ? 'Årligt' : 'Månedligt'})` },
+                            unit_amount: priceDkk * 100,
+                        },
+                        quantity: 1,
+                    }],
+                    mode: 'payment',
+                    success_url: `${req.protocol}://${req.get('host')}/account.html?membership=success`,
+                    cancel_url: `${req.protocol}://${req.get('host')}/index.html#membership`,
+                });
+        
+                res.json({ url: sessionStripe.url });
+            } catch (err) {
+                res.status(500).json({ error: 'Kunne ikke starte medlemskab.' });
+            }
         });
-
-        res.json({ url: sessionStripe.url });
     } catch (err) {
         res.status(500).json({ error: 'Kunne ikke starte medlemskab.' });
     }
