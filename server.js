@@ -38,6 +38,7 @@ async function initDb() {
                 membership_active BOOLEAN DEFAULT false,
                 membership_plan VARCHAR(50),
                 points INT DEFAULT 100,
+                last_spin_date TIMESTAMP,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -92,6 +93,7 @@ async function initDb() {
             ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_active BOOLEAN DEFAULT false;
             ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_plan VARCHAR(50);
             ALTER TABLE users ADD COLUMN IF NOT EXISTS points INT DEFAULT 100;
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS last_spin_date TIMESTAMP;
         `).catch(() => {});
 
         await pool.query(`
@@ -410,7 +412,7 @@ app.post('/api/auth/logout', (req, res) => {
 app.get('/api/account', async (req, res) => {
     if (!req.session.userId) return res.status(401).json({ error: 'Ikke logget ind' });
     try {
-        const userRes = await pool.query('SELECT id, name, email, phone, membership_active, membership_plan, points FROM users WHERE id = $1', [req.session.userId]);
+        const userRes = await pool.query('SELECT id, name, email, phone, membership_active, membership_plan, points, last_spin_date FROM users WHERE id = $1', [req.session.userId]);
         if (userRes.rows.length === 0) {
             req.session.destroy(() => {});
             return res.status(401).json({ error: 'Bruger ikke fundet' });
@@ -437,11 +439,26 @@ app.get('/api/account', async (req, res) => {
             trackingNumber: o.tracking_number
         }));
 
+        // Tjek om brugeren kan spinne (om der er gået 24 timer siden sidst)
+        let canSpin = true;
+        let nextSpinIn = null;
+        if (user.last_spin_date) {
+            const lastSpin = new Date(user.last_spin_date).getTime();
+            const now = new Date().getTime();
+            const diffHours = (now - lastSpin) / (1000 * 60 * 60);
+            if (diffHours < 24) {
+                canSpin = false;
+                nextSpinIn = Math.ceil(24 - diffHours);
+            }
+        }
+
         res.json({
             user: {
                 name: user.name,
                 email: user.email,
                 points: user.points || 0,
+                canSpin,
+                nextSpinIn,
                 membership: {
                     active: user.membership_active,
                     plan: user.membership_plan
@@ -451,6 +468,51 @@ app.get('/api/account', async (req, res) => {
         });
     } catch (err) {
         res.status(500).json({ error: 'Databasefejl' });
+    }
+});
+
+// POKE-WHEEL / DAGLIG SPIN API
+app.post('/api/spin-wheel', async (req, res) => {
+    if (!req.session.userId) return res.status(401).json({ error: 'Du skal være logget ind for at spinne.' });
+    
+    try {
+        const userRes = await pool.query('SELECT points, last_spin_date FROM users WHERE id = $1', [req.session.userId]);
+        if (userRes.rows.length === 0) return res.status(404).json({ error: 'Bruger ikke fundet.' });
+
+        const user = userRes.rows[0];
+
+        if (user.last_spin_date) {
+            const lastSpin = new Date(user.last_spin_date).getTime();
+            const now = new Date().getTime();
+            const diffHours = (now - lastSpin) / (1000 * 60 * 60);
+            if (diffHours < 24) {
+                const hoursLeft = Math.ceil(24 - diffHours);
+                return res.status(400).json({ error: `Du har allerede spunnet i dag! Prøv igen om ca. ${hoursLeft} time(r).` });
+            }
+        }
+
+        // Vælg tilfældige PokeCoins mellem 10 og 100
+        const possiblePrizes = [10, 15, 20, 25, 30, 40, 50, 75, 100];
+        // Vægtning: Gør de lavere præmier mere almindelige, og 100 til en sjælden jackpot
+        const weightedPrizes = [10, 10, 10, 15, 15, 20, 20, 25, 30, 40, 50, 75, 100];
+        const wonCoins = weightedPrizes[Math.floor(Math.random() * weightedPrizes.length)];
+
+        await pool.query(
+            'UPDATE users SET points = COALESCE(points, 0) + $1, last_spin_date = CURRENT_TIMESTAMP WHERE id = $2',
+            [wonCoins, req.session.userId]
+        );
+
+        const updatedUser = await pool.query('SELECT points FROM users WHERE id = $1', [req.session.userId]);
+
+        res.json({ 
+            success: true, 
+            wonCoins, 
+            newPoints: updatedUser.rows[0].points,
+            message: `Tillykke! Du vandt ${wonCoins} PokeCoins på hjulet! ⚡`
+        });
+    } catch (err) {
+        console.error('Spin fejl:', err);
+        res.status(500).json({ error: 'Kunne ikke gennemføre spin.' });
     }
 });
 
