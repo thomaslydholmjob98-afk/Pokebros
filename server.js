@@ -213,6 +213,53 @@ app.delete('/api/admin/users/:id', checkAdmin, async (req, res) => {
     }
 });
 
+// OFFENTLIG SØGNING / TRACKING AF ORDRE VIA API
+app.get('/api/orders/lookup/:orderId', async (req, res) => {
+    const { orderId } = req.params;
+    if (!orderId) {
+        return res.status(400).json({ error: 'Ordre ID mangler.' });
+    }
+
+    try {
+        const orderRes = await pool.query('SELECT * FROM orders WHERE order_id = $1', [orderId]);
+        if (orderRes.rows.length === 0) {
+            return res.status(404).json({ error: 'Ordren blev ikke fundet i systemet.' });
+        }
+        
+        const o = orderRes.rows[0];
+        
+        const statusLabels = {
+            'modtaget': 'Ordre Modtaget',
+            'under_behandling': 'Under Behandling',
+            'sendt_cgc': 'Sendt til CGC',
+            'hos_cgc': 'Hos CGC (Gradering)',
+            'retur': 'Pakket & Retur til Kunde'
+        };
+
+        res.json({
+            success: true,
+            order: {
+                orderId: o.order_id,
+                createdAt: o.created_at,
+                qty: o.qty,
+                tier: o.tier,
+                totalDkk: o.total_dkk,
+                status: o.status,
+                statusLabel: statusLabels[o.status] || o.status,
+                trackingNumber: o.tracking_number,
+                customer_name: o.customer_name,
+                customer_email: o.customer_email,
+                customer_address: o.customer_address,
+                customer_postal: o.customer_postal,
+                customer_city: o.customer_city
+            }
+        });
+    } catch (err) {
+        console.error('Ordre lookup fejl:', err);
+        res.status(500).json({ error: 'Der opstod en databasefejl ved søgning.' });
+    }
+});
+
 // OFFENTLIG ORDREHENTNING TIL PAKKESEDDEL
 app.get('/api/track-public/:orderId', async (req, res) => {
     const { orderId } = req.params;
