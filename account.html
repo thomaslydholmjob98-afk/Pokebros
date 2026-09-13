@@ -17,6 +17,50 @@
         .btn-slip-small:hover { background: #d90429; }
         .logout-btn { background: transparent; border: 1px solid #e63946; color: #e63946; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .logout-btn:hover { background: #e63946; color: #fff; }
+
+        /* POKE-WHEEL / DAGLIG SPIN STYLING */
+        .spin-section {
+            background: linear-gradient(135deg, #1b263b 0%, #0d1b2a 100%);
+            border: 2px solid #ffb703;
+            border-radius: 12px;
+            padding: 25px;
+            text-align: center;
+            margin-top: 25px;
+            box-shadow: 0 10px 25px rgba(255,183,3,0.15);
+        }
+        .spin-btn {
+            background: linear-gradient(135deg, #ffb703 0%, #f77f00 100%);
+            color: #111;
+            font-size: 18px;
+            font-weight: 900;
+            padding: 14px 30px;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(255,183,3,0.4);
+            transition: transform 0.2s, filter 0.2s;
+            margin-top: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .spin-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            filter: brightness(1.1);
+        }
+        .spin-btn:disabled {
+            background: #444;
+            color: #888;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        @keyframes spinAnim {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(720deg) scale(1.2); filter: hue-rotate(90deg); }
+            100% { transform: rotate(1440deg) scale(1); }
+        }
+        .spinning {
+            animation: spinAnim 1.2s cubic-bezier(0.15, 0.85, 0.35, 1) forwards;
+        }
     </style>
 </head>
 <body>
@@ -44,7 +88,7 @@
             <div style="background: linear-gradient(135deg, #1a1e29 0%, #111318 100%); border: 2px solid #ffb703; border-radius: 12px; padding: 20px; margin: 25px 0 20px 0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px;">
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <!-- Mønt-ikon med P i -->
-                    <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #ffb703 0%, #f77f00 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(255,183,3,0.3); border: 2px solid #fff;">
+                    <div id="coinIconBox" style="width: 48px; height: 48px; background: linear-gradient(135deg, #ffb703 0%, #f77f00 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(255,183,3,0.3); border: 2px solid #fff;">
                         <span style="color: #111; font-weight: 900; font-size: 22px; font-family: Arial, sans-serif;">P</span>
                     </div>
                     <div>
@@ -58,7 +102,17 @@
                 </div>
             </div>
 
-            <div id="membershipStatus" style="padding: 15px; background: #1a1e29; border-radius: 8px; border: 1px solid #333;">
+            <!-- DAGLIG POKE-WHEEL SPIN SEKTION -->
+            <div class="spin-section">
+                <h3 style="color: #ffb703; margin-top: 0; font-size: 20px;">⚡ Dagligt Poke-Wheel Spin ⚡</h3>
+                <p style="color: #ccc; font-size: 14px; max-width: 500px; margin: 0 auto 15px auto;">
+                    Spin hjulet én gang dagligt og vind mellem <strong>10 og 100 gratis PokeCoins</strong> til din næste CGC-submission!
+                </p>
+                <button id="spinBtn" class="spin-btn" onclick="spinWheel()">Spin Hjulet Nu! 🎰</button>
+                <p id="spinMsg" style="margin-top: 12px; font-size: 14px; color: #2ec4b6; font-weight: bold;"></p>
+            </div>
+
+            <div id="membershipStatus" style="padding: 15px; background: #1a1e29; border-radius: 8px; border: 1px solid #333; margin-top: 20px;">
                 <b>Medlemskab:</b> <span id="memberDesc">Indlæser medlemsstatus...</span>
             </div>
         </div>
@@ -72,6 +126,17 @@
             </div>
         </div>
     </main>
+
+    <!-- GEVINST MODAL -->
+    <div id="winModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; justify-content: center; align-items: center;">
+        <div style="background: #111318; border: 3px solid #ffb703; border-radius: 16px; padding: 40px; text-align: center; max-width: 400px; width: 90%; box-shadow: 0 10px 40px rgba(255,183,3,0.4);">
+            <h2 style="color: #ffb703; font-size: 26px; margin-top: 0;">🎉 BINGO! 🎉</h2>
+            <p style="color: #ccc; font-size: 16px;">Du vandt:</p>
+            <div id="wonCoinsAmount" style="font-size: 38px; font-weight: 900; color: #2ec4b6; margin: 15px 0;">+50 PokeCoins</div>
+            <p style="font-size: 14px; color: #aaa; margin-bottom: 25px;">Mønterne er sat direkte ind på din konto og kan bruges som rabat ved næste ordre!</p>
+            <button onclick="closeWinModal()" class="spin-btn" style="padding: 10px 25px; font-size: 15px;">Fedt, tak!</button>
+        </div>
+    </div>
 
     <script>
         async function loadAccountData() {
@@ -91,6 +156,19 @@
                 document.getElementById('userPointsDisplay').textContent = points + ' Coins';
                 const dkkValue = (points / 100).toFixed(2);
                 document.getElementById('userPointsDkk').textContent = `Svarer til ${dkkValue} kr. i rabat`;
+
+                // Håndter Spin-knap status
+                const spinBtn = document.getElementById('spinBtn');
+                const spinMsg = document.getElementById('spinMsg');
+                if (!data.user.canSpin) {
+                    spinBtn.disabled = true;
+                    spinMsg.textContent = `⏳ Du har allerede spunnet i dag! Næste spin er klar om ca. ${data.user.nextSpinIn} time(r).`;
+                    spinMsg.style.color = '#ff4d5a';
+                } else {
+                    spinBtn.disabled = false;
+                    spinMsg.textContent = '✨ Hjulet er klar til i dag!';
+                    spinMsg.style.color = '#2ec4b6';
+                }
 
                 const m = data.user.membership;
                 let memberText = 'Ingen aktivt medlemskab. (Tilmeld dig på forsiden for at få rabat på Bulk-grading).';
@@ -129,6 +207,45 @@
                 console.error(err);
                 window.location.href = 'login.html';
             }
+        }
+
+        async function spinWheel() {
+            const spinBtn = document.getElementById('spinBtn');
+            const coinIcon = document.getElementById('coinIconBox');
+            const spinMsg = document.getElementById('spinMsg');
+
+            spinBtn.disabled = true;
+            spinMsg.textContent = 'Hjulet spinner... 🌀';
+            coinIcon.classList.add('spinning');
+
+            try {
+                const res = await fetch('/api/spin-wheel', { method: 'POST' });
+                const data = await res.json();
+
+                setTimeout(() => {
+                    coinIcon.classList.remove('spinning');
+                    if (!res.ok) throw new Error(data.error || 'Fejl ved spin');
+
+                    // Vis gevinst-modal
+                    document.getElementById('wonCoinsAmount').textContent = `+${data.wonCoins} PokeCoins`;
+                    document.getElementById('winModal').style.display = 'flex';
+
+                    // Genindlæs kontodata
+                    loadAccountData();
+                }, 1200);
+
+            } catch (err) {
+                setTimeout(() => {
+                    coinIcon.classList.remove('spinning');
+                    spinBtn.disabled = false;
+                    spinMsg.textContent = err.message;
+                    spinMsg.style.color = '#ff4d5a';
+                }, 1200);
+            }
+        }
+
+        function closeWinModal() {
+            document.getElementById('winModal').style.display = 'none';
         }
 
         async function logout() {
