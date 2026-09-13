@@ -175,14 +175,19 @@ app.patch('/api/admin/users/:id/points', checkAdmin, async (req, res) => {
     }
 
     try {
-        await pool.query(
-            'UPDATE users SET points = $1 WHERE id = $2',
+        const result = await pool.query(
+            'UPDATE users SET points = $1 WHERE id = $2 RETURNING id, points',
             [parsedPoints, id]
         );
-        res.json({ success: true });
+
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Brugeren blev ikke fundet i databasen' });
+        }
+
+        res.json({ success: true, updatedPoints: result.rows[0].points });
     } catch (e) {
-        console.error('Fejl ved opdatering af point:', e);
-        res.status(500).json({ error: 'Kunne ikke opdatere PokeCoins' });
+        console.error('Fejl ved opdatering af PokeCoins:', e.message);
+        res.status(500).json({ error: 'Kunne ikke opdatere PokeCoins: ' + e.message });
     }
 });
 
