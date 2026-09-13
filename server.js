@@ -488,6 +488,7 @@ app.get('/api/admin/sell-requests', checkAdmin, async (req, res) => {
     }
 });
 
+// UDVIDET AI-GRADE MED PRIS- OG MARKEDSESTIMAT (CARDMARKET / EBAY)
 app.post('/api/ai-grade', async (req, res) => {
     try {
         const { frontImageBase64, backImageBase64, cardName } = req.body || {};
@@ -501,7 +502,15 @@ app.post('/api/ai-grade', async (req, res) => {
         const frontData = frontImageBase64.replace(/^data:image\/\w+;base64,/, '');
 
         const parts = [
-            { text: `Du er en professionel CGC / PSA kort-grader for samlekort (Pokémon / One Piece). Analyser dette kort (${cardName || 'Ukendt kort'}) ud fra de medfølgende billeder (forside og evt. bagside). Vurder de fire underområder: Centering, Corners, Edges og Surface. Giv en estimeret CGC-karakter samt en konstruktiv, ærlig begrundelse på dansk.` },
+            { text: `Du er en professionel CGC / PSA kort-grader og markedsekspert for samlekort (Pokémon / One Piece). Analyser dette kort (${cardName || 'Ukendt kort'}) ud fra de medfølgende billeder (forside og evt. bagside). 
+
+            Giv følgende i dit svar formateret på dansk:
+            1. **Kortets identitet:** Sæt, navn og nummer (hvis det kan aflæses).
+            2. **Stand-analyse:** Vurder Centering, Corners, Edges og Surface, samt en estimeret CGC-karakter.
+            3. **Prisestimat (Markedsværdi):** 
+               - Estimeret pris for kortet i rå/ungraded stand (baseret på gennemsnitlige markedspriser fra Cardmarket/eBay).
+               - Estimeret pris for kortet i en CGC slab med den forventede karakter.
+            4. **Konstruktive bemærkninger:** Ærlig begrundelse for vurderingen.` },
             { inline_data: { mime_type: frontMimeType, data: frontData } }
         ];
 
@@ -729,7 +738,6 @@ app.post('/api/order-success', async (req, res) => {
 
         if (updateRes.rows.length > 0) {
             const order = updateRes.rows[0];
-            // Send kvittering i baggrunden
             sendOrderReceiptEmail(order);
             return res.json({ success: true });
         } else {
