@@ -216,7 +216,7 @@ async function sendWelcomeEmail({ name, email }) {
     const brevoApiKey = process.env.BREVO_API_KEY;
     if (!brevoApiKey) return;
 
-    const senderEmail = 'thomaslydholmjob98@gmail.com';
+    const senderEmail = 'kontakt@thepokebros.com';
 
     try {
         await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -277,7 +277,7 @@ async function sendOrderReceiptEmail(order) {
                 'content-type': 'application/json'
             },
             body: JSON.stringify({
-                sender: { name: 'The Poke Bros', email: 'thomaslydholmjob98@gmail.com' },
+                sender: { name: 'The Poke Bros', email: 'kontakt@thepokebros.com' },
                 to: [{ email: order.customer_email, name: order.customer_name || 'Kunde' }],
                 subject: `🧾 Kvittering for din ordre (${order.order_id})`,
                 htmlContent: `
@@ -448,7 +448,7 @@ async function sendBrevoEmail({ name, email, phone, details, expectedPrice }) {
     const brevoApiKey = process.env.BREVO_API_KEY;
     if (!brevoApiKey) return;
 
-    const recipientEmail = 'thomaslydholmjob98@gmail.com';
+    const recipientEmail = 'kontakt@thepokebros.com';
 
     try {
         await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -665,7 +665,7 @@ app.patch('/api/admin/orders/:id', checkAdmin, async (req, res) => {
                         'content-type': 'application/json'
                     },
                     body: JSON.stringify({
-                        sender: { name: 'The Poke Bros', email: 'thomaslydholmjob98@gmail.com' },
+                        sender: { name: 'The Poke Bros', email: 'kontakt@thepokebros.com' },
                         to: [{ email: order.customer_email, name: order.customer_name || 'Kunde' }],
                         subject: `📦 Opdatering på din grading-ordre (${order.order_id})`,
                         htmlContent: `
