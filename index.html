@@ -88,9 +88,9 @@
         .user-badge-header {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             background: #1a1e29;
-            padding: 6px 14px;
+            padding: 5px 12px;
             border-radius: 20px;
             border: 1px solid #333;
             font-size: 14px;
@@ -100,8 +100,31 @@
             font-weight: bold;
         }
 
-        /* PERFEKT RUND POKECOIN MØNT-STYLING */
-        .pokecoin-icon {
+        /* LÆKKER RUND POKECOIN MØNT (Både i header og sektion) */
+        .pokecoin-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #ffb703;
+            font-weight: bold;
+        }
+        .pokecoin-icon-small {
+            width: 22px;
+            height: 22px;
+            min-width: 22px;
+            min-height: 22px;
+            background: linear-gradient(135deg, #ffb703 0%, #f77f00 100%);
+            border-radius: 50% !important;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #111;
+            font-weight: 900;
+            font-size: 12px;
+            border: 1.5px solid #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .pokecoin-icon-large {
             width: 36px;
             height: 36px;
             min-width: 36px;
@@ -113,6 +136,9 @@
             justify-content: center;
             border: 2px solid #fff;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            color: #111;
+            font-weight: 900;
+            font-size: 16px;
         }
 
         /* MOBIL HAMBURGER MENU STYLING */
@@ -366,9 +392,7 @@
     <section style="max-width: 1000px; margin: 60px auto; padding: 0 20px;">
         <div style="background: linear-gradient(135deg, #1a1e29 0%, #111318 100%); border: 2px solid #2ec4b6; border-radius: 12px; padding: 30px; text-align: center; box-shadow: 0 10px 30px rgba(46,196,182,0.1);">
             <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 10px;">
-                <div class="pokecoin-icon">
-                    <span style="color: #111; font-weight: 900; font-size: 16px;">P</span>
-                </div>
+                <div class="pokecoin-icon-large">P</div>
                 <h3 style="color: #2ec4b6; font-size: 24px; margin: 0;">Opret konto & optjen PokeCoins!</h3>
             </div>
             <p style="color: #ccc; max-width: 600px; margin: 10px auto 20px; font-size: 15px;">
@@ -445,13 +469,13 @@
     <small>Pokémon og CGC er varemærker tilhørende deres respektive ejere.</small>
 </footer>
 
-<!-- LIVLIG PIKACHU MASKOT I VENSTRE BUND (Med stabil online-kilde så den ikke blokeres) -->
+<!-- LIVLIG PIKACHU MASKOT I VENSTRE BUND -->
 <div id="pikachuContainer">
     <div id="pikachuSpeech">Pika-pika! Klik på mig for at få et godt råd! ⚡</div>
     <img id="pikachuMaskot" src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png" alt="Pikachu Maskot" onclick="clickPikachu()" title="Klik på Pikachu!">
 </div>
 
-<!-- Stor, svævende & genert Master Ball (Løftet op i højre hjørne) -->
+<!-- Stor, svævende & genert Master Ball -->
 <div id="easterEggContainer">
     <div id="pokeEasterEgg" onclick="triggerMasterBallRain()" title="Klik for en overraskelse!">
         <svg viewBox="0 0 100 100" style="width: 85px; height: 85px; min-width: 85px; min-height: 85px; display: block;">
@@ -478,30 +502,48 @@
 </div>
 
 <script>
-// Pikachu citater og interaktion
+// Pikachu tilfældige citater og automatisk tidsstyring
 const pikachuQuotes = [
     "Pika-pika! Husk at tjekke din kort-centering med vores AI Pre-Grade! ⚡",
     "Chuu! Du kan sende helt ned til 1 enkelt kort hos The Poke Bros!",
     "Pikachu! Medlemmer sparer 30 kr. pr. kort på vores Bulk-service! 🎯",
     "Bili-bili! Alle forsendelser til CGC er fuldt forsikrede undervejs!",
-    "Pika! Har du tjekket live-puljen på forsiden? Vi nærmer os 25 kort! 📦"
+    "Pika! Har du tjekket live-puljen på forsiden? Vi nærmer os 25 kort! 📦",
+    "Chili-pika! Husk at bruge toploaders når du sender dine kort ind til os!",
+    "Pika-chuu! Du optjener PokeCoins på alle ordrer, som kan bruges som rabat! 🪙"
 ];
 
-function clickPikachu() {
-    const speech = document.getElementById('pikachuSpeech');
-    const pikachuImg = document.getElementById('pikachuMaskot');
-    
-    pikachuImg.style.transform = 'scale(1.25) rotate(10deg)';
-    setTimeout(() => { pikachuImg.style.transform = 'scale(1) rotate(0deg)'; }, 300);
+let pikachuTimer = null;
 
+function showRandomPikachuQuote() {
+    const speech = document.getElementById('pikachuSpeech');
+    if (!speech) return;
+
+    // Vælg en tilfældig replik (random rækkefølge)
     const randomQuote = pikachuQuotes[Math.floor(Math.random() * pikachuQuotes.length)];
     speech.textContent = randomQuote;
     speech.classList.add('show');
     
-    setTimeout(() => {
+    // Bliv stående i 8 sekunder (så den ikke forsvinder for hurtigt)
+    if (pikachuTimer) clearTimeout(pikachuTimer);
+    pikachuTimer = setTimeout(() => {
         speech.classList.remove('show');
-    }, 4500);
+    }, 8000);
 }
+
+function clickPikachu() {
+    const pikachuImg = document.getElementById('pikachuMaskot');
+    pikachuImg.style.transform = 'scale(1.25) rotate(10deg)';
+    setTimeout(() => { pikachuImg.style.transform = 'scale(1) rotate(0deg)'; }, 300);
+
+    // Vis straks en ny tilfældig replik ved klik
+    showRandomPikachuQuote();
+}
+
+// Start automatisk visning af tilfældige replikker hver 15. sekund
+setInterval(() => {
+    showRandomPikachuQuote();
+}, 15000);
 
 // Funktion til at åbne/lukke mobilmenuen
 function toggleMobileMenu() {
@@ -657,7 +699,7 @@ q.oninput=calc;
 tier.onchange=calc; 
 shippingSelect.onchange=calc;
 
-// Automatisk opdatering af header med brugernavn, VIP status og PokeCoins
+// Automatisk opdatering af header med brugernavn, VIP status og runde PokeCoins
 async function checkHeaderAuth() {
     try {
         const res = await fetch('/api/auth/me');
@@ -674,8 +716,11 @@ async function checkHeaderAuth() {
                 <div class="user-badge-header">
                     <a href="account.html" style="color: #fff; text-decoration: none; font-weight: bold;">👤 ${u.name || u.email}</a>
                     <span style="color: #888;">|</span>
-                    <span>🪙 ${u.points || 0} Coins</span>
-                    <a href="account.html" class="btn small" style="background: #2ec4b6; color: #000; padding: 4px 10px; font-size: 12px; margin-left: 5px;">Min Konto</a>
+                    <div class="pokecoin-pill">
+                        <div class="pokecoin-icon-small">P</div>
+                        <span>${u.points || 0} Coins</span>
+                    </div>
+                    <a href="account.html" class="btn small" style="background: #2ec4b6; color: #000; padding: 4px 10px; font-size: 12px; margin-left: 2px;">Min Konto</a>
                 </div>
             `;
             
