@@ -37,7 +37,7 @@ async function initDb() {
                 password_hash VARCHAR(255),
                 membership_active BOOLEAN DEFAULT false,
                 membership_plan VARCHAR(50),
-                points INT DEFAULT 1000,
+                points INT DEFAULT 100,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -91,7 +91,7 @@ async function initDb() {
             ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
             ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_active BOOLEAN DEFAULT false;
             ALTER TABLE users ADD COLUMN IF NOT EXISTS membership_plan VARCHAR(50);
-            ALTER TABLE users ADD COLUMN IF NOT EXISTS points INT DEFAULT 1000;
+            ALTER TABLE users ADD COLUMN IF NOT EXISTS points INT DEFAULT 100;
         `).catch(() => {});
 
         await pool.query(`
@@ -164,7 +164,7 @@ app.patch('/api/admin/users/:id', checkAdmin, async (req, res) => {
     }
 });
 
-// ADMIN: OPDATÉR BRUGERS POKECOINS ( TILFØJ / FJERNE )
+// ADMIN: OPDATÉR BRUGERS POKECOINS
 app.patch('/api/admin/users/:id/points', checkAdmin, async (req, res) => {
     const { id } = req.params;
     const { points } = req.body;
@@ -230,7 +230,7 @@ async function sendWelcomeEmail({ name, email }) {
                         <div style="max-width: 600px; margin: 0 auto; background: #111318; color: #fff; padding: 40px; border-radius: 12px; border: 1px solid #222;">
                             <h1 style="color: #e63946; margin-top: 0; text-align: center;">Velkommen til The Poke Bros! 🚀</h1>
                             <p>Hej <b>${name || 'samler'}</b>,</p>
-                            <p>Mange tak for din oprettelse af en konto hos <b>The Poke Bros</b>! Som velkomstbonus har vi indsat <b>1.000 PokeCoins</b> på din konto.</p>
+                            <p>Mange tak for din oprettelse af en konto hos <b>The Poke Bros</b>! Som velkomstbonus har vi indsat <b>100 PokeCoins</b> på din konto.</p>
                             
                             <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
                             
@@ -324,7 +324,7 @@ app.post('/api/auth/register', async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const result = await pool.query(
-            'INSERT INTO users (name, email, phone, password_hash, points) VALUES ($1, $2, $3, $4, 1000) RETURNING id, name, email, phone, membership_active, membership_plan, points',
+            'INSERT INTO users (name, email, phone, password_hash, points) VALUES ($1, $2, $3, $4, 100) RETURNING id, name, email, phone, membership_active, membership_plan, points',
             [name || '', email, phone || '', hashedPassword]
         );
 
@@ -743,7 +743,6 @@ app.delete('/api/admin/products/:id', checkAdmin, async (req, res) => {
     }
 });
 
-// NY RUTE: OPDATERER BETALING TIL PAID, TILDELER POKECOINS OG SENDER KVITTERING
 app.post('/api/order-success', async (req, res) => {
     const { orderId } = req.body;
     if (!orderId) return res.status(400).json({ error: 'Ordre ID mangler' });
@@ -757,7 +756,6 @@ app.post('/api/order-success', async (req, res) => {
         if (updateRes.rows.length > 0) {
             const order = updateRes.rows[0];
             
-            // Tildel PokeCoins: 1 PokeCoin pr. 1 DKK brugt
             if (order.customer_email && order.total_dkk) {
                 const earnedCoins = Math.round(order.total_dkk);
                 await pool.query(
