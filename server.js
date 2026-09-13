@@ -242,6 +242,61 @@ async function sendWelcomeEmail({ name, email }) {
     }
 }
 
+// BREVO: FUNKTION TIL AT SENDE ORDREKVITTERING VED BETALING
+async function sendOrderReceiptEmail(order) {
+    const brevoApiKey = process.env.BREVO_API_KEY;
+    if (!brevoApiKey || !order.customer_email) return;
+
+    try {
+        await fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: {
+                'accept': 'application/json',
+                'api-key': brevoApiKey,
+                'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+                sender: { name: 'The Poke Bros', email: 'thomaslydholmjob98@gmail.com' },
+                to: [{ email: order.customer_email, name: order.customer_name || 'Kunde' }],
+                subject: `🧾 Kvittering for din ordre (${order.order_id})`,
+                htmlContent: `
+                    <div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; color: #333;">
+                        <div style="max-width: 600px; margin: 0 auto; background: #111318; color: #fff; padding: 40px; border-radius: 12px; border: 1px solid #222;">
+                            <h2 style="color: #2ec4b6; margin-top: 0; text-align: center;">Tak for din bestilling! 🧾</h2>
+                            <p>Hej <b>${order.customer_name || 'Samler'}</b>,</p>
+                            <p>Vi har modtaget din betaling for ordre <b>${order.order_id}</b>. Dine kort er nu klar til at blive sendt ind i vores næste CGC-pulje!</p>
+                            
+                            <div style="background: #1a1e29; padding: 20px; border-radius: 8px; border: 1px solid #333; margin: 25px 0;">
+                                <h3 style="margin-top: 0; color: #e63946; font-size: 16px;">Ordredetaljer</h3>
+                                <p style="margin: 5px 0;"><b>Ordre ID:</b> ${order.order_id}</p>
+                                <p style="margin: 5px 0;"><b>Service / Tier:</b> ${order.tier.toUpperCase()}</p>
+                                <p style="margin: 5px 0;"><b>Antal kort:</b> ${order.qty} stk.</p>
+                                <p style="margin: 5px 0;"><b>Returfragt:</b> ${order.shipping_method}</p>
+                                <hr style="border: 0; border-top: 1px solid #444; margin: 15px 0;">
+                                <p style="margin: 5px 0; font-size: 16px;"><b>Samlet pris:</b> <span style="color: #2ec4b6;">${order.total_dkk} kr.</span></p>
+                            </div>
+
+                            <h3 style="color: #2ec4b6; font-size: 16px;">Hvad sker der nu?</h3>
+                            <ol style="line-height: 1.6; color: #ccc; font-size: 14px;">
+                                <li>Pak dine kort forsvarligt i sleeves og toploaders.</li>
+                                <li>Udskriv din <a href="https://www.thepokebros.com/packingslip.html?order=${order.order_id}" style="color: #e63946;">pakkeseddel her</a> og læg den ved.</li>
+                                <li>Send pakken til os – du kan følge status på din konto.</li>
+                            </ol>
+                            
+                            <p style="margin-top: 40px; text-align: center; color: #888; font-size: 13px;">
+                                De bedste hilsner,<br>
+                                <b>The Poke Bros Team</b>
+                            </p>
+                        </div>
+                    </div>
+                `
+            })
+        });
+    } catch (err) {
+        console.error('Kunne ikke sende kvitteringsmail via Brevo:', err.message);
+    }
+}
+
 // BRUGER AUTHENTICATION & KONTO DATA
 app.post('/api/auth/register', async (req, res) => {
     try {
@@ -658,6 +713,31 @@ app.delete('/api/admin/products/:id', checkAdmin, async (req, res) => {
         res.json({ success: true });
     } catch (e) {
         res.status(500).json({ error: 'Kunne ikke slette produkt' });
+    }
+});
+
+// NY RUTE: OPKATÉR BETALING TIL PAID OG SEND KVITTERINGSMAIL NÅR KUNDEN LANDER PÅ SUCCESS
+app.post('/api/order-success', async (req, res) => {
+    const { orderId } = req.body;
+    if (!orderId) return res.status(400).json({ error: 'Ordre ID mangler' });
+
+    try {
+        const updateRes = await pool.query(
+            "UPDATE orders SET payment_status = 'paid' WHERE order_id = $1 RETURNING *",
+            [orderId]
+        );
+
+        if (updateRes.rows.length > 0) {
+            const order = updateRes.rows[0];
+            // Send kvittering i baggrunden
+            sendOrderReceiptEmail(order);
+            return res.json({ success: true });
+        } else {
+            return res.status(404).json({ error: 'Ordre ikke fundet' });
+        }
+    } catch (err) {
+        console.error('Fejl ved opdatering af betalingsstatus:', err);
+        res.status(500).json({ error: 'Kunne ikke opdatere ordre' });
     }
 });
 
