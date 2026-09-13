@@ -95,16 +95,31 @@
 </header>
 
 <main>
-    <section class="hero">
-        <div class="hero-img"></div>
-        <div class="shade"></div>
-        <div class="hero-copy">
-            <span class="eyebrow">CGC GRADING • NEMT FOR DANSKE SAMLERE</span>
-            <h1>Få dine kort graded<br>uden en stor submission.</h1>
+    <!-- Pokémon Anime-inspireret ThePokeBros som Baggrund / Hero -->
+    <section class="hero" style="background: linear-gradient(135deg, #1b263b 0%, #0d1b2a 100%); position: relative; overflow: hidden; border-bottom: 4px solid #ffb703;">
+        <!-- Baggrundselementer / Glød -->
+        <div style="position: absolute; top: 10%; left: 50%; transform: translateX(-50%); width: 600px; height: 300px; background: radial-gradient(circle, rgba(255,183,3,0.12) 0%, rgba(0,0,0,0) 70%); pointer-events: none; z-index: 1;"></div>
+        
+        <!-- Kæmpe "ThePokeBros" vandmærke / anime-tekst i baggrunden -->
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) skew(-3deg); width: 100%; text-align: center; font-size: clamp(60px, 14vw, 150px); font-weight: 900; font-family: Arial, sans-serif; text-transform: uppercase; color: rgba(255,183,3,0.06); letter-spacing: 4px; pointer-events: none; z-index: 1; user-select: none; white-space: nowrap;">
+            ThePokeBros
+        </div>
+
+        <div class="hero-img" style="z-index: 2; opacity: 0.25;"></div>
+        <div class="shade" style="z-index: 3; background: linear-gradient(to bottom, rgba(13,27,42,0.85), rgba(13,27,42,0.95));"></div>
+        
+        <div class="hero-copy" style="position: relative; z-index: 4;">
+            <span class="eyebrow" style="background: rgba(230,57,70,0.2); border: 1px solid #e63946; padding: 4px 12px; border-radius: 20px;">⚡ CGC GRADING • NEMT FOR DANSKE SAMLERE ⚡</span>
+            
+            <!-- Overskrift med den klassiske anime-stil -->
+            <h1 style="font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 2px; color: #ffb703; text-shadow: 3px 3px 0px #1d3557, 6px 6px 0px #000, 0 0 25px rgba(255,183,3,0.4);">
+                Få dine kort graded<br>uden en stor submission.
+            </h1>
+            
             <p>Send det antal kort, du ønsker, til The Poke Bros. Vi samler kundernes kort og håndterer submissionen til CGC.</p>
             <div class="actions">
-                <a class="btn" href="#order">Send kort til grading</a>
-                <a class="btn ghost" href="ai-grade.html" style="border-color: #e63946; color: #e63946;">Prøv AI Pre-Grade ✨</a>
+                <a class="btn" href="#order" style="background: #ffb703; color: #111; font-weight: 900; box-shadow: 0 5px 15px rgba(255,183,3,0.4);">Send kort til grading</a>
+                <a class="btn ghost" href="ai-grade.html" style="border-color: #2ec4b6; color: #2ec4b6; font-weight: bold;">Prøv AI Pre-Grade ✨</a>
             </div>
         </div>
     </section>
