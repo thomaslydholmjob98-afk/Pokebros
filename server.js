@@ -901,7 +901,7 @@ app.post('/api/checkout', async (req, res) => {
             }
         }
 
-        let subtotal = qty * pricePerCard;
+        let subtotal = (qty || 1) * pricePerCard;
         let shipPrice = shippingMethod === 'hjemmelevering' ? 69 : 49;
         let totalDkk = subtotal + shipPrice;
 
@@ -910,6 +910,16 @@ app.post('/api/checkout', async (req, res) => {
         }
 
         const orderId = 'TPB-' + Math.floor(100000 + Math.random() * 900000);
+
+        // Hvis STRIPE_SECRET_KEY mangler, opretter vi ordren direkte som 'paid' til testbrug
+        if (!process.env.STRIPE_SECRET_KEY) {
+            await pool.query(
+                `INSERT INTO orders (order_id, customer_name, customer_email, customer_phone, customer_address, customer_postal, customer_city, qty, tier, shipping_method, total_dkk, payment_status, status)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'paid', 'modtaget')`,
+                [orderId, name || 'Test Samler', email || 'test@test.dk', phone || '12345678', address || 'Testvej 1', postal || '1000', city || 'København', qty || 1, tier || 'bulk', shippingMethod || 'postnord', totalDkk]
+            );
+            return res.json({ url: `/success.html?order=${orderId}` });
+        }
 
         const sessionStripe = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
@@ -934,31 +944,8 @@ app.post('/api/checkout', async (req, res) => {
 
         res.json({ url: sessionStripe.url });
     } catch (err) {
-        res.status(500).json({ error: 'Kunne ikke oprette betaling.' });
-    }
-});
-
-// TEST-CHECKOUT RUTE UDEN STRIPE
-app.post('/api/test-checkout', async (req, res) => {
-    try {
-        const { name, email, phone, address, postal, city, qty, tier, shippingMethod } = req.body;
-        const basePrices = { bulk: 279, economy: 299, standard: 499, express: 899, walkthrough: 2199, unlimited: 2199 };
-        let pricePerCard = basePrices[tier] || 279;
-        let subtotal = (qty || 1) * pricePerCard;
-        let shipPrice = shippingMethod === 'hjemmelevering' ? 69 : 49;
-        let totalDkk = subtotal + shipPrice;
-
-        const orderId = 'TPB-TEST-' + Math.floor(100000 + Math.random() * 900000);
-
-        await pool.query(
-            `INSERT INTO orders (order_id, customer_name, customer_email, customer_phone, customer_address, customer_postal, customer_city, qty, tier, shipping_method, total_dkk, payment_status, status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'paid', 'modtaget')`,
-            [orderId, name || 'Test Samler', email || 'test@test.dk', phone || '12345678', address || 'Testvej 1', postal || '1000', city || 'København', qty || 1, tier || 'bulk', shippingMethod || 'postnord', totalDkk]
-        );
-
-        res.json({ success: true, url: `/success.html?order=${orderId}` });
-    } catch (err) {
-        res.status(500).json({ error: 'Kunne ikke oprette testordre: ' + err.message });
+        console.error('Checkout fejl:', err);
+        res.status(500).json({ error: 'Kunne ikke oprette betaling: ' + err.message });
     }
 });
 
@@ -967,6 +954,11 @@ app.post('/api/membership-checkout', async (req, res) => {
         if (!req.session.userId) return res.status(401).json({ error: 'Du skal være logget ind.' });
         const { plan } = req.body;
         const priceDkk = plan === 'yearly' ? 599 : 59;
+
+        // Hvis STRIPE_SECRET_KEY mangler under test
+        if (!process.env.STRIPE_SECRET_KEY) {
+            return res.json({ url: `/account.html?membership=success` });
+        }
 
         const sessionStripe = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
