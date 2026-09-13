@@ -56,6 +56,22 @@
         .faq-item.active .faq-question::after { transform: rotate(45deg); }
         .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s ease; padding: 0 20px; color: #ccc; font-size: 14px; line-height: 1.6; }
         .faq-item.active .faq-answer { max-height: 300px; padding: 0 20px 18px 20px; }
+
+        /* Styling til brugerkonto-knap og PokeCoins i headeren */
+        .user-badge-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #1a1e29;
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid #333;
+            font-size: 14px;
+        }
+        .user-badge-header span {
+            color: #ffb703;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -71,9 +87,11 @@
         <a href="#faq">FAQ</a>
         <a href="track.html">Spor ordre</a>
         <a href="#contact">Kontakt</a>
-        <a href="account.html" id="accountLink">Min konto</a>
     </nav>
-    <a class="btn small" href="#order">Bestil grading</a>
+    <div id="headerAuthContainer">
+        <!-- Indlæses automatisk via JavaScript -->
+        <a href="login.html" class="btn small" style="background: #e63946; color: #fff;">Log ind / Opret</a>
+    </div>
 </header>
 
 <main>
@@ -546,35 +564,67 @@ q.oninput=calc;
 tier.onchange=calc; 
 shippingSelect.onchange=calc;
 
-async function loadAccount(){
-    try{
-        const j=await fetch('/api/auth/me').then(r=>r.json());
-        if(j.loggedIn){
-            me=j.user;
-            accountLink.textContent='Min konto';
-            const form=document.getElementById('checkoutForm');
-            form.elements.name.value=me.name||'';
-            document.getElementById('userEmailInput').value=me.email||'';
-            form.elements.phone.value=me.phone||'';
+// Automatisk opdatering af header med brugernavn, VIP status og PokeCoins
+async function checkHeaderAuth() {
+    try {
+        const res = await fetch('/api/auth/me');
+        const data = await res.json();
+        
+        const container = document.getElementById('headerAuthContainer');
+        if (!container) return;
+
+        if (data.loggedIn && data.user) {
+            const u = data.user;
             
-            const isMemberActive = me.membership?.active || me.membership?.plan === 'free';
-            if(isMemberActive){
-                prices={bulk:249,economy:Math.round(299*.95),standard:Math.round(499*.95),express:Math.round(899*.95),walkthrough:Math.round(2199*.95),unlimited:Math.round(2199*.95)};
-                const leadText = me.membership?.plan === 'free' ? 'Du har et Gratis VIP Poke Bro-medlemskab. Medlemsprisen anvendes automatisk.' : 'Du er aktiv Poke Bro. Din medlemspris anvendes automatisk, når du bestiller med din konto.';
-                document.querySelector('#membership .lead').textContent=leadText;
+            container.innerHTML = `
+                <div class="user-badge-header">
+                    <a href="account.html" style="color: #fff; text-decoration: none; font-weight: bold;">👤 ${u.name || u.email}</a>
+                    <span style="color: #888;">|</span>
+                    <span>🪙 ${u.points || 0} Coins</span>
+                    <a href="account.html" class="btn small" style="background: #2ec4b6; color: #000; padding: 4px 10px; font-size: 12px; margin-left: 5px;">Min Konto</a>
+                </div>
+            `;
+            
+            me = u;
+            const form = document.getElementById('checkoutForm');
+            if (form) {
+                form.elements.name.value = u.name || '';
+                document.getElementById('userEmailInput').value = u.email || '';
+                form.elements.phone.value = u.phone || '';
+            }
+            
+            const isMemberActive = u.membership?.active || u.membership?.plan === 'free';
+            if (isMemberActive) {
+                prices = {bulk:249,economy:Math.round(299*.95),standard:Math.round(499*.95),express:Math.round(899*.95),walkthrough:Math.round(2199*.95),unlimited:Math.round(2199*.95)};
+                const leadText = u.membership?.plan === 'free' ? 'Du har et Gratis VIP Poke Bro-medlemskab. Medlemsprisen anvendes automatisk.' : 'Du er aktiv Poke Bro. Din medlemspris anvendes automatisk, når du bestiller med din konto.';
+                const memberLead = document.querySelector('#membership .lead');
+                if (memberLead) memberLead.textContent = leadText;
+            }
+            document.getElementById('loginWarning').style.display = 'none';
+            const submitBtn = document.getElementById('submitOrderBtn');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                submitBtn.textContent = 'Gå til sikker betaling';
             }
         } else {
-            accountLink.textContent='Log ind';
-            accountLink.href='login.html';
-            document.getElementById('loginWarning').style.display='block';
-            document.getElementById('submitOrderBtn').disabled=true;
-            document.getElementById('submitOrderBtn').style.opacity='0.5';
-            document.getElementById('submitOrderBtn').textContent='Log ind for at bestille';
+            container.innerHTML = `<a href="login.html" class="btn small" style="background: #e63946; color: #fff;">Log ind / Opret</a>`;
+            document.getElementById('loginWarning').style.display = 'block';
+            const submitBtn = document.getElementById('submitOrderBtn');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.5';
+                submitBtn.textContent = 'Log ind for at bestille';
+            }
         }
         calc();
-    }catch{calc();}
+    } catch (e) {
+        console.error('Fejl ved tjek af auth i header:', e);
+        calc();
+    }
 }
-loadAccount();
+
+checkHeaderAuth();
 
 document.getElementById('checkoutForm').addEventListener('submit',async e=>{
     e.preventDefault();
