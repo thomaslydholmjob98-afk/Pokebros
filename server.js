@@ -164,6 +164,28 @@ app.patch('/api/admin/users/:id', checkAdmin, async (req, res) => {
     }
 });
 
+// ADMIN: OPDATÉR BRUGERS POKECOINS ( TILFØJ / FJERNE )
+app.patch('/api/admin/users/:id/points', checkAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { points } = req.body;
+    
+    const parsedPoints = parseInt(points, 10);
+    if (isNaN(parsedPoints)) {
+        return res.status(400).json({ error: 'Ugyldigt antal point' });
+    }
+
+    try {
+        await pool.query(
+            'UPDATE users SET points = $1 WHERE id = $2',
+            [parsedPoints, id]
+        );
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Fejl ved opdatering af point:', e);
+        res.status(500).json({ error: 'Kunne ikke opdatere PokeCoins' });
+    }
+});
+
 // ADMIN: FULD SLETNING AF BRUGER OG ALT DERES DATA
 app.delete('/api/admin/users/:id', checkAdmin, async (req, res) => {
     const userId = req.params.id;
