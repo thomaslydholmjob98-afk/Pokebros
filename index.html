@@ -7,7 +7,7 @@
     <meta name="description" content="Send dine samlekort til The Poke Bros og få dem indsendt til CGC grading uden selv at skulle samle en stor submission.">
     <link rel="stylesheet" href="style.css">
     <style>
-        /* Svævende Master Ball & Genert flugt-effekt (Placeret perfekt i hjørnet) */
+        /* Svævende Master Ball & Genert flugt-effekt */
         @keyframes floatMasterBall {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-18px); }
@@ -73,38 +73,47 @@
             font-weight: bold;
         }
 
-        /* MOBILVENLIG NAVIGATION FIX (Gør at man kan scrolle menupunkterne vandret på telefoner) */
+        /* MOBIL HAMBURGER MENU STYLING */
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: 2px solid #333;
+            color: #fff;
+            font-size: 22px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
         @media (max-width: 900px) {
             header {
-                flex-direction: column;
-                align-items: stretch;
+                flex-wrap: wrap;
+                justify-content: space-between;
                 padding: 12px 15px;
-                gap: 10px;
+            }
+            .mobile-menu-btn {
+                display: block;
             }
             header nav {
-                display: flex;
-                overflow-x: auto;
-                white-space: nowrap;
-                gap: 15px;
-                padding-bottom: 6px;
-                -webkit-overflow-scrolling: touch;
-                scrollbar-width: none; /* Skjul scrollbar i Firefox */
+                display: none;
+                width: 100%;
+                flex-direction: column;
+                gap: 8px;
+                padding-top: 15px;
+                border-top: 1px solid #222;
+                margin-top: 12px;
             }
-            header nav::-webkit-scrollbar {
-                display: none; /* Skjul scrollbar i Chrome/Safari */
+            header nav.active {
+                display: flex;
             }
             header nav a {
-                flex-shrink: 0;
-                font-size: 13px;
-                padding: 4px 8px;
+                padding: 10px 14px;
                 background: #1a1e29;
-                border-radius: 4px;
+                border-radius: 6px;
                 border: 1px solid #333;
+                text-align: left;
             }
             #headerAuthContainer {
-                display: flex;
-                justify-content: center;
-                width: 100%;
+                display: none; /* Flyttes eller håndteres via menuen på mobil */
             }
         }
     </style>
@@ -112,7 +121,8 @@
 <body>
 <header>
     <a class="brand" href="#">THE POKE BROS</a>
-    <nav>
+    <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰ Menu</button>
+    <nav id="mainNav">
         <a href="#how">Sådan virker det</a>
         <a href="#prices">Priser</a>
         <a href="#membership">Bliv en Poke Bro</a>
@@ -122,9 +132,10 @@
         <a href="#faq">FAQ</a>
         <a href="track.html">Spor ordre</a>
         <a href="#contact">Kontakt</a>
+        <div id="mobileAuthContainer" style="margin-top: 10px;"></div>
     </nav>
     <div id="headerAuthContainer">
-        <!-- Indlæses automatisk via JavaScript -->
+        <!-- Indlæses automatisk via JavaScript på desktop -->
         <a href="login.html" class="btn small" style="background: #e63946; color: #fff;">Log ind / Opret</a>
     </div>
 </header>
@@ -132,10 +143,8 @@
 <main>
     <!-- Pokémon Anime-inspireret ThePokeBros som Baggrund / Hero -->
     <section class="hero" style="background: linear-gradient(135deg, #1b263b 0%, #0d1b2a 100%); position: relative; overflow: hidden; border-bottom: 4px solid #ffb703;">
-        <!-- Baggrundselementer / Glød -->
         <div style="position: absolute; top: 10%; left: 50%; transform: translateX(-50%); width: 600px; height: 300px; background: radial-gradient(circle, rgba(255,183,3,0.12) 0%, rgba(0,0,0,0) 70%); pointer-events: none; z-index: 1;"></div>
         
-        <!-- Kæmpe "ThePokeBros" vandmærke / anime-tekst i baggrunden -->
         <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) skew(-3deg); width: 100%; text-align: center; font-size: clamp(60px, 14vw, 150px); font-weight: 900; font-family: Arial, sans-serif; text-transform: uppercase; color: rgba(255,183,3,0.06); letter-spacing: 4px; pointer-events: none; z-index: 1; user-select: none; white-space: nowrap;">
             ThePokeBros
         </div>
@@ -146,7 +155,6 @@
         <div class="hero-copy" style="position: relative; z-index: 4;">
             <span class="eyebrow" style="background: rgba(230,57,70,0.2); border: 1px solid #e63946; padding: 4px 12px; border-radius: 20px;">⚡ CGC GRADING • NEMT FOR DANSKE SAMLERE ⚡</span>
             
-            <!-- Overskrift med den klassiske anime-stil -->
             <h1 style="font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 2px; color: #ffb703; text-shadow: 3px 3px 0px #1d3557, 6px 6px 0px #000, 0 0 25px rgba(255,183,3,0.4);">
                 Få dine kort graded<br>uden en stor submission.
             </h1>
@@ -414,6 +422,12 @@
 </div>
 
 <script>
+// Funktion til at åbne/lukke mobilmenuen
+function toggleMobileMenu() {
+    const nav = document.getElementById('mainNav');
+    nav.classList.toggle('active');
+}
+
 const eggContainer = document.getElementById('easterEggContainer');
 const egg = document.getElementById('pokeEasterEgg');
 
@@ -569,12 +583,13 @@ async function checkHeaderAuth() {
         const data = await res.json();
         
         const container = document.getElementById('headerAuthContainer');
+        const mobileAuthContainer = document.getElementById('mobileAuthContainer');
         if (!container) return;
 
         if (data.loggedIn && data.user) {
             const u = data.user;
             
-            container.innerHTML = `
+            const badgeHtml = `
                 <div class="user-badge-header">
                     <a href="account.html" style="color: #fff; text-decoration: none; font-weight: bold;">👤 ${u.name || u.email}</a>
                     <span style="color: #888;">|</span>
@@ -582,6 +597,9 @@ async function checkHeaderAuth() {
                     <a href="account.html" class="btn small" style="background: #2ec4b6; color: #000; padding: 4px 10px; font-size: 12px; margin-left: 5px;">Min Konto</a>
                 </div>
             `;
+            
+            container.innerHTML = badgeHtml;
+            if (mobileAuthContainer) mobileAuthContainer.innerHTML = badgeHtml;
             
             me = u;
             const form = document.getElementById('checkoutForm');
@@ -606,7 +624,10 @@ async function checkHeaderAuth() {
                 submitBtn.textContent = 'Gå til sikker betaling';
             }
         } else {
-            container.innerHTML = `<a href="login.html" class="btn small" style="background: #e63946; color: #fff;">Log ind / Opret</a>`;
+            const loginBtnHtml = `<a href="login.html" class="btn small" style="background: #e63946; color: #fff; display: block; text-align: center;">Log ind / Opret</a>`;
+            container.innerHTML = loginBtnHtml;
+            if (mobileAuthContainer) mobileAuthContainer.innerHTML = loginBtnHtml;
+            
             document.getElementById('loginWarning').style.display = 'block';
             const submitBtn = document.getElementById('submitOrderBtn');
             if (submitBtn) {
